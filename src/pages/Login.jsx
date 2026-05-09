@@ -7,7 +7,7 @@ const Login = ({ onLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email === 'admin' && password === '123') {
+    if (email === 'ADMIN' && password === 'ESRDC12345678') {
       onLogin();
     } else {
       alert('Invalid Credentials');
