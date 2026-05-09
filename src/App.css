@@ -474,3 +474,87 @@
 .export-btn:hover {
   opacity: 0.8;
 }
+
+/* ====================================================================== */
+/* RESPONSIVE ADDITIONS (Fixes for Mobile and Tablet)                     */
+/* ====================================================================== */
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Layout changes */
+  .dashboard-layout {
+    flex-direction: column; /* Stack sidebar and content vertically on mobile */
+  }
+
+  .sidebar {
+    width: 100% !important; /* Force sidebar to full width */
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .sidebar-nav {
+    flex-direction: row; /* Turn sidebar links into a horizontal row */
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+
+  .nav-item {
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .sidebar-footer {
+    display: none; /* Hide footer on mobile sidebar to save space */
+  }
+
+  /* Main content padding */
+  .main-content {
+    padding: 1rem;
+  }
+
+  /* Make tables scrollable horizontally instead of squishing */
+  .table-card {
+    overflow-x: auto;
+  }
+
+  .custom-table {
+    min-width: 600px; 
+  }
+
+  /* Grid adjustments */
+  .waste-grid {
+    grid-template-columns: 1fr; /* Single column on small mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .export-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
