@@ -8,6 +8,8 @@ const Login = ({ onLogin }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (email === 'ADMIN' && password === 'ESRDC12345678') {
+      // PERSISTENCE FIX: Save login status to browser storage
+      localStorage.setItem('isLoggedIn', 'true');
       onLogin();
     } else {
       alert('Invalid Credentials');

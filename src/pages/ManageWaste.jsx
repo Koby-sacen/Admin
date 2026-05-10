@@ -1,13 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase'; // Adjust path if needed
+import { db } from '../firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { 
+  FileSpreadsheet, 
+  FileText, 
+  Search, 
+  MapPin, 
+  Scale, 
+  User, 
+  Calendar, 
+  ChevronRight,
+  Info
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import '../App.css';
 
 export default function ManageWaste() {
   const [logs, setLogs] = useState([]);
+  const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchWasteLogs = async () => {
@@ -15,212 +28,154 @@ export default function ManageWaste() {
         const wasteRef = collection(db, 'waste_collection');
         const q = query(wasteRef, orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
-        
         const wasteData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        
         setLogs(wasteData);
+        setFilteredLogs(wasteData);
       } catch (error) {
         console.error("Error fetching waste logs: ", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchWasteLogs();
   }, []);
 
-  // CSV Download Logic
+  // Search filter logic
+  useEffect(() => {
+    const results = logs.filter(log =>
+      log.item?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.location?.detectedCollege?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredLogs(results);
+  }, [searchTerm, logs]);
+
   const downloadCSV = () => {
     if (logs.length === 0) return;
-
-    const headers = [
-      "ID", "Bin Data", "Created At", "Decomposition Period", "Energy Level", 
-      "Energy Reason", "Image URI", "Item", "Address", "College", 
-      "Latitude", "Longitude", "Recyclability Rate", "Steps", 
-      "Suggestions", "Total Count", "Total Weight", "User ID", 
-      "User Name", "Waste List"
-    ];
-
+    const headers = ["Date", "User", "Bin", "Item", "Weight", "College", "Address"];
     const rows = logs.map(log => [
-      log.id,
-      `"${log.binData || ''}"`,
-      `"${log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : ''}"`,
-      `"${log.decompPeriod || ''}"`,
-      `"${log.energyLevel || ''}"`,
-      `"${log.energyReason || ''}"`,
-      `"${log.imageUri || ''}"`,
-      `"${log.item || ''}"`,
-      `"${log.location?.address || ''}"`,
-      `"${log.location?.detectedCollege || ''}"`,
-      log.location?.latitude || '',
-      log.location?.longitude || '',
-      `"${log.recyclabilityRate || ''}"`,
-      `"${log.stepData || ''}"`,
-      `"${log.suggestions || ''}"`,
-      `"${log.totalCount || ''}"`,
-      `"${log.totalWeight || ''}"`,
-      `"${log.userId || ''}"`,
-      `"${log.userName || ''}"`,
-      `"${Array.isArray(log.wasteList) ? log.wasteList.join('; ') : ''}"`
+      log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : '',
+      log.userName || '',
+      log.binData || '',
+      log.item || '',
+      log.totalWeight || '',
+      log.location?.detectedCollege || '',
+      `"${log.location?.address || ''}"`
     ]);
-
     const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `waste_logs_${new Date().toLocaleDateString()}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `waste_report_${new Date().toLocaleDateString()}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
-  // PDF Download Logic (RE-FIXED & UPDATED WITH ALL FIELDS)
   const downloadPDF = () => {
-    try {
-      if (logs.length === 0) {
-        alert("No data available to download.");
-        return;
-      }
-
-      const doc = new jsPDF('l', 'pt', 'a3'); // Using A3 Landscape to fit the massive amount of data
-      
-      doc.setFontSize(20);
-      doc.setTextColor(40);
-      doc.text("Waste Collection Master Report", 40, 40);
-      
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 40, 60);
-
-      // Comprehensive Headers
-      const tableColumn = [
-        "Date", "User", "Bin", "Item", "Weight", "Qty", 
-        "Decomp", "Energy", "Recycle %", "College", "Address", "Waste Details", "Suggestions"
-      ];
-
-      const tableRows = logs.map(log => [
-        log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : 'N/A',
-        log.userName || 'Anonymous',
-        log.binData || 'N/A',
-        log.item || 'N/A',
-        log.totalWeight || '0g',
-        log.totalCount || '0',
-        log.decompPeriod || 'N/A',
-        `${log.energyLevel || ''}: ${log.energyReason || ''}`,
-        log.recyclabilityRate || 'N/A',
-        log.location?.detectedCollege || 'N/A',
-        log.location?.address || 'N/A',
-        Array.isArray(log.wasteList) ? log.wasteList.join('\n') : 'N/A',
-        log.suggestions || 'N/A'
-      ]);
-
-      autoTable(doc, {
-        startY: 80,
-        head: [tableColumn],
-        body: tableRows,
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], fontSize: 7 },
-        styles: { fontSize: 6, cellPadding: 3, overflow: 'linebreak' },
-        columnStyles: {
-          3: { cellWidth: 100 }, // Item
-          7: { cellWidth: 120 }, // Energy
-          10: { cellWidth: 100 }, // Address
-          11: { cellWidth: 150 }, // Waste List
-          12: { cellWidth: 150 }, // Suggestions
-        }
-      });
-
-      doc.save(`waste_full_report_${new Date().toLocaleDateString()}.pdf`);
-    } catch (error) {
-      console.error("PDF Generation Error:", error);
-      alert("Failed to generate PDF. Check console for details.");
-    }
-  };
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "N/A";
-    const date = timestamp.toDate();
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    const doc = new jsPDF('l', 'pt', 'a3');
+    doc.text("Waste Collection Master Report", 40, 40);
+    const tableColumn = ["Date", "User", "Bin", "Item", "Weight", "College", "Recycle %", "Address"];
+    const tableRows = logs.map(log => [
+      log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : 'N/A',
+      log.userName || 'Anonymous',
+      log.binData || 'N/A',
+      log.item || 'N/A',
+      log.totalWeight || '0g',
+      log.location?.detectedCollege || 'N/A',
+      log.recyclabilityRate || 'N/A',
+      log.location?.address || 'N/A'
+    ]);
+    autoTable(doc, {
+      startY: 60,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229] }
     });
+    doc.save(`Waste_Report_${new Date().toLocaleDateString()}.pdf`);
   };
 
   return (
-    <div className="manage-waste-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 className="table-title" style={{ margin: 0 }}>Waste Collection Logs</h2>
+    <div className="waste-management-wrapper">
+      {/* Header Section */}
+      <div className="waste-header">
+        <div className="header-left">
+          <h2 className="header-title">Collection Logs</h2>
+          <p className="header-subtitle">Overview of all classified waste items</p>
+        </div>
         
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={downloadCSV}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Download CSV
+        <div className="header-actions">
+          <div className="search-bar-container">
+            <Search size={18} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search items, users, or colleges..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="modern-search-input"
+            />
+          </div>
+          <button onClick={downloadCSV} className="export-btn csv">
+            <FileSpreadsheet size={18} /> CSV Download
           </button>
-          
-          <button 
-            onClick={downloadPDF}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Download PDF
+          <button onClick={downloadPDF} className="export-btn pdf">
+            <FileText size={18} /> PDF Download
           </button>
         </div>
       </div>
-      
-      {loading ? (
-        <div className="loading-state">Loading collection data...</div>
-      ) : (
-        <div className="waste-grid">
-          {logs.map(log => (
-            <div key={log.id} className="waste-card">
-              <div className="waste-card-header">
-                <span className="waste-date">{formatDate(log.createdAt)}</span>
-                <span className={`bin-badge ${log.binData?.toLowerCase().replace(/\s+/g, '-')}`}>
-                  {log.binData || 'General'}
-                </span>
-              </div>
-              
-              <h3 className="waste-item-name">{log.item || 'Unknown Item'}</h3>
-              
-              <div className="waste-stats">
-                <div className="stat">
-                  <label>Weight</label>
-                  <p className="weight-value">{log.totalWeight || '0g'}</p>
-                </div>
-                <div className="stat">
-                  <label>User</label>
-                  <p className="user-value">{log.userName || 'Anonymous'}</p>
-                </div>
-              </div>
 
-              <div className="waste-location">
-                <p>📍 {log.location?.address || 'No address recorded'}</p>
+      {/* Main Content */}
+      <div className="logs-container">
+        {loading ? (
+          <div className="modern-loader">
+            <div className="pulse-circle"></div>
+            <p>Gathering logs...</p>
+          </div>
+        ) : (
+          <div className="modern-log-list">
+            {filteredLogs.map((log) => (
+              <div key={log.id} className="log-row">
+                {/* Left: Date & Bin */}
+                <div className="log-meta">
+                  <div className="log-date-box">
+                    <span className="month">{log.createdAt?.toDate().toLocaleDateString('en-US', {month: 'short'})}</span>
+                    <span className="day">{log.createdAt?.toDate().getDate()}</span>
+                  </div>
+                  <div className={`bin-indicator ${log.binData?.toLowerCase().includes('blue') ? 'blue' : 'general'}`}></div>
+                </div>
+
+                {/* Center Left: Item Details */}
+                <div className="log-main-info">
+                  <h4 className="log-item-title">{log.item || 'Classified Item'}</h4>
+                  <div className="log-sub-details">
+                    <span><User size={14} /> {log.userName || 'Anonymous'}</span>
+                    <span><Scale size={14} /> {log.totalWeight || 'N/A'}</span>
+                    <span><MapPin size={14} /> {log.location?.detectedCollege || 'Campus'}</span>
+                  </div>
+                </div>
+
+                {/* Center Right: College/Location Badge */}
+                <div className="log-location-badge">
+                   <p className="address-text">{log.location?.address?.substring(0, 45)}...</p>
+                </div>
+
+                {/* Right: Metrics & Arrow */}
+                <div className="log-metrics">
+                  <div className="metric-pill">
+                     <span className="label">Recyclability</span>
+                     <span className="value">{log.recyclabilityRate || '0%'}</span>
+                  </div>
+                  <ChevronRight size={20} className="row-arrow" />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
