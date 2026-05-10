@@ -234,8 +234,11 @@
     padding: 1rem;
   }
 
+  /* FIXED: Changed from display: none to block to show the logout button */
   .sidebar-footer {
-    display: none; /* Usually hide large footer on mobile top-nav */
+    display: block; 
+    border-top: 1px solid #e5e7eb;
+    padding: 0.5rem 1rem;
   }
 
   .sidebar-logo span, 
@@ -248,6 +251,11 @@
   .nav-item {
     padding: 0.5rem;
     white-space: nowrap; /* Don't wrap text in top bar */
+  }
+
+  .logout-button {
+    width: auto; /* Allow button to fit text on mobile */
+    padding: 0.5rem;
   }
 
   .main-content {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase'; 
+import { db, auth } from '../firebase'; // Added auth import to check current user
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { User, Shield, Mail, Trash2, Eye, RefreshCw, X, AlertCircle } from 'lucide-react'; 
 import '../App.css';
@@ -31,11 +31,19 @@ export default function ManageUsers() {
   }, []);
 
   const handleDelete = async (id) => {
+    // Prevent admin from deleting their own account via this panel
+    if (auth.currentUser && auth.currentUser.uid === id) {
+      alert("You cannot delete your own admin account from this panel.");
+      setShowDeleteConfirm(null);
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'users', id));
       setUsers(users.filter(user => user.id !== id));
       setShowDeleteConfirm(null);
     } catch (error) {
+      console.error("Delete Error Detail:", error);
       alert("Error deleting user: " + error.message);
     }
   };
@@ -47,7 +55,7 @@ export default function ManageUsers() {
       await updateDoc(userRef, { role: newRole });
       setUsers(users.map(u => u.id === user.id ? { ...u, role: newRole } : u));
     } catch (error) {
-      alert("Failed to update role");
+      alert("Failed to update role: " + error.message);
     }
   };
 
@@ -86,7 +94,6 @@ export default function ManageUsers() {
                   <td>
                     <div className="user-info-cell">
                       <div className="avatar-placeholder">
-                        {/* Removed Image tag, using Icon only */}
                         <User size={20} />
                       </div>
                       <div className="user-text">
@@ -122,14 +129,12 @@ export default function ManageUsers() {
         )}
       </div>
 
-      {/* --- MODERN VIEW MODAL (NO IMAGES) --- */}
       {selectedUser && (
         <div className="modal-blur-overlay">
           <div className="modal-card-modern">
             <button className="modal-close-icon" onClick={() => setSelectedUser(null)}><X size={24} /></button>
             <div className="modal-header-profile">
                 <div className="profile-banner"></div>
-                {/* Replaced Profile Image with styled Icon circle */}
                 <div className="profile-large-icon-circle">
                   <User size={48} />
                 </div>
@@ -155,7 +160,6 @@ export default function ManageUsers() {
         </div>
       )}
 
-      {/* --- DANGER ZONE MODAL --- */}
       {showDeleteConfirm && (
         <div className="modal-blur-overlay danger">
           <div className="modal-card-small">

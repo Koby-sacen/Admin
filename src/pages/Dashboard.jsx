@@ -5,26 +5,17 @@ import { signOut } from 'firebase/auth';
 import { Users, Trash2, LayoutDashboard, LogOut } from 'lucide-react';
 import '../App.css';
 
-const Dashboard = ({ onLogout }) => { // 1. Receive onLogout prop
+const Dashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
-
     try {
       setIsLoggingOut(true);
-      
-      // 2. Sign out from Firebase
       await signOut(auth);
-      
-      // 3. Update the Parent State (App.js)
-      if (onLogout) {
-        onLogout();
-      }
-
-      // 4. Redirect
+      if (onLogout) onLogout();
       navigate('/login', { replace: true }); 
     } catch (error) {
       console.error("Logout Error:", error);
@@ -68,7 +59,7 @@ const Dashboard = ({ onLogout }) => { // 1. Receive onLogout prop
             disabled={isLoggingOut}
           >
             <LogOut size={20} /> 
-            <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+            <span>{isLoggingOut ? '...' : 'Logout'}</span>
           </button>
         </div>
       </aside>
