@@ -210,16 +210,46 @@
   margin: 0 auto;
 }
 
-/* Responsive adjustment */
+/* Responsive adjustment - UPDATED TO MOVE SIDEBAR TO TOP */
 @media (max-width: 768px) {
-  .sidebar {
-    width: 70px;
+  .dashboard-layout {
+    flex-direction: column; /* Stack vertically */
   }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid #000000;
+  }
+
+  .sidebar-nav {
+    flex-direction: row; /* Nav items in a row */
+    overflow-x: auto; /* Scroll horizontally if many items */
+    padding-bottom: 1rem;
+  }
+
+  .sidebar-header {
+    padding: 1rem;
+  }
+
+  .sidebar-footer {
+    display: none; /* Usually hide large footer on mobile top-nav */
+  }
+
   .sidebar-logo span, 
   .nav-item span, 
   .logout-button span {
-    display: none; /* Hide text on small screens, show only icons */
+    display: inline; /* Re-show text for the top bar */
+    font-size: 0.8rem;
   }
+
+  .nav-item {
+    padding: 0.5rem;
+    white-space: nowrap; /* Don't wrap text in top bar */
+  }
+
   .main-content {
     padding: 1rem;
   }
