@@ -5,6 +5,12 @@ import Dashboard from './pages/Dashboard';
 import ManageUsers from './pages/ManageUsers';
 import ManageWaste from './pages/ManageWaste';
 import Home from './pages/Home';
+import Engineering from './colleges/Engineering';
+import CAS from './Colleges/CAS';
+import CIT from './Colleges/CIT';
+import CONHS from './Colleges/CONHS';
+import COED from './Colleges/COED';
+import GRADUATES from './Colleges/GRADUATES';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -36,6 +42,14 @@ function App() {
           <Route index element={<Home />} />
           <Route path="users" element={<ManageUsers />} />
           <Route path="waste" element={<ManageWaste />} />
+          
+          {/* ADDED ROUTE FOR COLLEGE OF ENGINEERING */}
+          <Route path="colleges/engineering" element={<Engineering />} />
+          <Route path="colleges/CAS" element={<CAS />} />
+          <Route path="colleges/CIT" element={<CIT />} />
+          <Route path="colleges/CONHS" element={<CONHS />} />
+          <Route path="colleges/COED" element={<COED />} />
+          <Route path="colleges/GRADUATES" element={<GRADUATES />} />
         </Route>
       </Routes>
     </BrowserRouter>

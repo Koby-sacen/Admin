@@ -2,8 +2,18 @@ import React, { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../firebase'; 
 import { signOut } from 'firebase/auth';
-import { Users, Trash2, LayoutDashboard, LogOut } from 'lucide-react';
+import { Users, Trash2, LayoutDashboard, LogOut, GraduationCap } from 'lucide-react';
 import '../App.css';
+
+// Updated list to ensure paths match your routing structure
+const collegesList = [
+  { name: 'College of Engineering', path: '/colleges/engineering' },
+  { name: 'College of Arts and Sciences', path: '/colleges/cas' },
+  { name: 'College of Industrial Technology', path: '/colleges/cit' },
+  { name: 'College of Nursing & Health Sciences', path: '/colleges/conhs' },
+  { name: 'College of Education', path: '/colleges/coed' },
+  { name: 'SSU College of Graduate Studies', path: '/colleges/graduates' },
+];
 
 const Dashboard = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -38,6 +48,7 @@ const Dashboard = ({ onLogout }) => {
         </div>
         
         <nav className="sidebar-nav">
+          <div className="nav-section-label">Main Menu</div>
           <Link to="/" className={isActive('/')}>
             <LayoutDashboard size={20} /> 
             <span>Dashboard</span>
@@ -50,6 +61,21 @@ const Dashboard = ({ onLogout }) => {
             <Trash2 size={20} /> 
             <span>Waste Collection</span>
           </Link>
+
+          <div className="nav-section-label" style={{ marginTop: '20px', padding: '10px 15px', fontSize: '12px', color: '#888', textTransform: 'uppercase', fontWeight: 'bold' }}>
+            Colleges & Departments
+          </div>
+          {collegesList.map((college, index) => (
+            <Link 
+              key={index} 
+              to={college.path} 
+              className={isActive(college.path)}
+              style={{ fontSize: '13px' }}
+            >
+              <GraduationCap size={18} /> 
+              <span>{college.name}</span>
+            </Link>
+          ))}
         </nav>
 
         <div className="sidebar-footer">
@@ -66,9 +92,13 @@ const Dashboard = ({ onLogout }) => {
 
       <main className="main-content">
         <header className="top-bar">
-          <h2>{location.pathname === '/' ? 'Overview' : 'Management'}</h2>
+          <h2>
+            {location.pathname === '/' ? 'Overview' : 
+             location.pathname.includes('/colleges/') ? 'College Department' : 'Management'}
+          </h2>
         </header>
         <div className="content-container">
+          {/* This is where Engineering.jsx will load when you click the link */}
           <Outlet />
         </div>
       </main>
