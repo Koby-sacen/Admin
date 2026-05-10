@@ -112,10 +112,11 @@
 
 /*----------------------------------------------------------------------*/
 /* Dashboard Layout Structure */
+/* Dashboard Layout Structure */
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background-color: #f9fafb; /* Light gray background */
+  background-color: #f9fafb;
 }
 
 /* Sidebar Styling */
@@ -128,8 +129,8 @@
   position: sticky;
   top: 0;
   height: 100vh;
-  transition: width 0.3s ease;
-  z-index: 100;
+  transition: all 0.3s ease;
+  z-index: 1000;
 }
 
 .sidebar-header {
@@ -142,11 +143,10 @@
   gap: 0.5rem;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #047857; /* Emerald 700 */
+  color: #047857;
   margin: 0;
 }
 
-/* Navigation Links */
 .sidebar-nav {
   flex: 1;
   padding: 0 1rem;
@@ -161,18 +161,22 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  color: #4b5563; /* Gray 600 */
+  color: #4b5563;
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s ease;
 }
 
-.nav-item:hover {
-  background-color: #ecfdf5; /* Emerald 50 */
-  color: #047857; /* Emerald 700 */
+.nav-item.active {
+  background-color: #ecfdf5;
+  color: #047857;
 }
 
-/* Sidebar Footer & Logout */
+.nav-item:hover {
+  background-color: #ecfdf5;
+  color: #047857;
+}
+
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid #e5e7eb;
@@ -187,17 +191,16 @@
   background: none;
   border: none;
   border-radius: 0.5rem;
-  color: #dc2626; /* Red 600 */
+  color: #dc2626;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .logout-button:hover {
-  background-color: #fef2f2; /* Red 50 */
+  background-color: #fef2f2;
 }
 
-/* Main Content Area */
 .main-content {
   flex: 1;
   padding: 2rem;
@@ -210,56 +213,50 @@
   margin: 0 auto;
 }
 
-/* Responsive adjustment - UPDATED TO MOVE SIDEBAR TO TOP */
+/* NEW: Mobile Menu Button Style */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1100;
+  background: #047857;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Responsive adjustment */
 @media (max-width: 768px) {
-  .dashboard-layout {
-    flex-direction: column; /* Stack vertically */
+  .mobile-menu-toggle {
+    display: block; /* Show toggle on mobile */
   }
 
   .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    border-right: none;
-    border-bottom: 1px solid #000000;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px; /* Fixed width for sidebar */
+    height: 100vh !important; /* Force full height */
+    transform: translateX(-100%); /* Hide off-screen */
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
   }
 
-  .sidebar-nav {
-    flex-direction: row; /* Nav items in a row */
-    overflow-x: auto; /* Scroll horizontally if many items */
-    padding-bottom: 1rem;
-  }
-
-  .sidebar-header {
-    padding: 1rem;
-  }
-
-  /* FIXED: Changed from display: none to block to show the logout button */
-  .sidebar-footer {
-    display: block; 
-    border-top: 1px solid #e5e7eb;
-    padding: 0.5rem 1rem;
-  }
-
-  .sidebar-logo span, 
-  .nav-item span, 
-  .logout-button span {
-    display: inline; /* Re-show text for the top bar */
-    font-size: 0.8rem;
-  }
-
-  .nav-item {
-    padding: 0.5rem;
-    white-space: nowrap; /* Don't wrap text in top bar */
-  }
-
-  .logout-button {
-    width: auto; /* Allow button to fit text on mobile */
-    padding: 0.5rem;
+  .sidebar.open {
+    transform: translateX(0); /* Slide in when open */
   }
 
   .main-content {
     padding: 1rem;
+    padding-top: 4rem; /* Make room for the toggle button */
+  }
+
+  /* Resetting the row logic from previous code that caused the "wide" look */
+  .sidebar-nav {
+    flex-direction: column !important; 
+    overflow-x: hidden;
   }
 }
 

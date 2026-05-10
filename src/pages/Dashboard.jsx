@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../firebase'; 
 import { signOut } from 'firebase/auth';
-import { Users, Trash2, LayoutDashboard, LogOut, GraduationCap } from 'lucide-react';
+import { Users, Trash2, LayoutDashboard, LogOut, GraduationCap, Menu, X } from 'lucide-react';
 import '../App.css';
 
 // Fixed paths to match lowercase convention used in App.js routing
@@ -19,6 +19,7 @@ const Dashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // Added for mobile toggle
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -37,10 +38,16 @@ const Dashboard = ({ onLogout }) => {
 
   const isActive = (path) => location.pathname === path ? 'nav-item active' : 'nav-item';
 
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
   return (
     <div className="dashboard-layout">
-      {/* Added display flex and height to ensure footer stays at bottom */}
-      <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      {/* Mobile Toggle Button */}
+      <button className="mobile-menu-toggle" onClick={toggleMenu}>
+        {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      <aside className={`sidebar ${isMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <Trash2 size={24} color="#4ade80" /> 
@@ -48,18 +55,17 @@ const Dashboard = ({ onLogout }) => {
           </div>
         </div>
         
-        {/* Added flex: 1 and overflow-y: auto so the links scroll but the header/footer stay put */}
         <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
           <div className="nav-section-label">Main Menu</div>
-          <Link to="/" className={isActive('/')}>
+          <Link to="/" className={isActive('/')} onClick={() => setIsMenuOpen(false)}>
             <LayoutDashboard size={20} /> 
             <span>Dashboard</span>
           </Link>
-          <Link to="/users" className={isActive('/users')}>
+          <Link to="/users" className={isActive('/users')} onClick={() => setIsMenuOpen(false)}>
             <Users size={20} /> 
             <span>Manage Users</span>
           </Link>
-          <Link to="/waste" className={isActive('/waste')}>
+          <Link to="/waste" className={isActive('/waste')} onClick={() => setIsMenuOpen(false)}>
             <Trash2 size={20} /> 
             <span>Waste Collection</span>
           </Link>
@@ -73,6 +79,7 @@ const Dashboard = ({ onLogout }) => {
               to={college.path} 
               className={isActive(college.path)}
               style={{ fontSize: '13px' }}
+              onClick={() => setIsMenuOpen(false)}
             >
               <GraduationCap size={18} /> 
               <span>{college.name}</span>
