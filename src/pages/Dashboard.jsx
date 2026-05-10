@@ -39,7 +39,8 @@ const Dashboard = ({ onLogout }) => {
 
   return (
     <div className="dashboard-layout">
-      <aside className="sidebar">
+      {/* Added display flex and height to ensure footer stays at bottom */}
+      <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <Trash2 size={24} color="#4ade80" /> 
@@ -47,7 +48,8 @@ const Dashboard = ({ onLogout }) => {
           </div>
         </div>
         
-        <nav className="sidebar-nav">
+        {/* Added flex: 1 and overflow-y: auto so the links scroll but the header/footer stay put */}
+        <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
           <div className="nav-section-label">Main Menu</div>
           <Link to="/" className={isActive('/')}>
             <LayoutDashboard size={20} /> 
@@ -78,11 +80,22 @@ const Dashboard = ({ onLogout }) => {
           ))}
         </nav>
 
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" style={{ padding: '20px', borderTop: '1px solid #eee' }}>
           <button 
             onClick={handleLogout} 
             className="logout-button"
             disabled={isLoggingOut}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '10px', 
+              width: '100%', 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              color: '#ff4d4f',
+              fontWeight: 'bold' 
+            }}
           >
             <LogOut size={20} /> 
             <span>{isLoggingOut ? '...' : 'Logout'}</span>
