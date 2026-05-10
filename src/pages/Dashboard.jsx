@@ -5,7 +5,7 @@ import { signOut } from 'firebase/auth';
 import { Users, Trash2, LayoutDashboard, LogOut, GraduationCap } from 'lucide-react';
 import '../App.css';
 
-// Updated list to ensure paths match your routing structure
+// Fixed paths to match lowercase convention used in App.js routing
 const collegesList = [
   { name: 'College of Engineering', path: '/colleges/engineering' },
   { name: 'College of Arts and Sciences', path: '/colleges/cas' },
@@ -98,7 +98,6 @@ const Dashboard = ({ onLogout }) => {
           </h2>
         </header>
         <div className="content-container">
-          {/* This is where Engineering.jsx will load when you click the link */}
           <Outlet />
         </div>
       </main>

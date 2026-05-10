@@ -22,7 +22,6 @@ function App() {
     setIsAuthenticated(true);
   };
 
-  // NEW: Logout handler to clear state and storage
   const handleLogoutState = () => {
     localStorage.removeItem('isAuthenticated');
     setIsAuthenticated(false);
@@ -35,7 +34,6 @@ function App() {
           !isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/" />
         } />
         
-        {/* Pass the logout handler to the Dashboard component */}
         <Route path="/" element={
           isAuthenticated ? <Dashboard onLogout={handleLogoutState} /> : <Navigate to="/login" />
         }>
@@ -43,13 +41,13 @@ function App() {
           <Route path="users" element={<ManageUsers />} />
           <Route path="waste" element={<ManageWaste />} />
           
-          {/* ADDED ROUTE FOR COLLEGE OF ENGINEERING */}
+          {/* Fixed paths to lowercase and corrected <CA /> typo to <CAS /> */}
           <Route path="colleges/engineering" element={<Engineering />} />
-          <Route path="colleges/CAS" element={<CAS />} />
-          <Route path="colleges/CIT" element={<CIT />} />
-          <Route path="colleges/CONHS" element={<CONHS />} />
-          <Route path="colleges/COED" element={<COED />} />
-          <Route path="colleges/GRADUATES" element={<GRADUATES />} />
+          <Route path="colleges/cas" element={<CAS />} />
+          <Route path="colleges/cit" element={<CIT />} />
+          <Route path="colleges/conhs" element={<CONHS />} />
+          <Route path="colleges/coed" element={<COED />} />
+          <Route path="colleges/graduates" element={<GRADUATES />} />
         </Route>
       </Routes>
     </BrowserRouter>
