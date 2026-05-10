@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ManageUsers from './pages/ManageUsers';
 import ManageWaste from './pages/ManageWaste';
 import Home from './pages/Home';
-import Engineering from './colleges/Engineering';
+import Engineering from './Colleges/Engineering';
 import CAS from './Colleges/CAS';
 import CIT from './Colleges/CIT';
 import CONHS from './Colleges/CONHS';
