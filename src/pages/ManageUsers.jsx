@@ -61,6 +61,37 @@ export default function ManageUsers() {
 
   return (
     <div className="manage-users-wrapper">
+      {/* Inline Style to force responsive behavior and remove the left gap */}
+      <style>{`
+        .manage-users-wrapper {
+          width: 100% !important;
+          max-width: 100vw !important;
+          margin-left: 0 !important;
+          padding: 20px !important;
+          box-sizing: border-box !important;
+        }
+        .table-container-modern {
+          overflow-x: auto !important;
+          width: 100% !important;
+          -webkit-overflow-scrolling: touch;
+        }
+        @media (max-width: 768px) {
+          .manage-users-wrapper {
+            padding: 10px !important;
+            margin: 0 !important;
+          }
+          .admin-header-main {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+          }
+          .modern-table {
+            display: block;
+            white-space: nowrap;
+          }
+        }
+      `}</style>
+
       <div className="admin-header-main">
         <div>
           <h2 className="header-title">User Management</h2>

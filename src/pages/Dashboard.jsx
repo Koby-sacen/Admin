@@ -5,7 +5,6 @@ import { signOut } from 'firebase/auth';
 import { Users, Trash2, LayoutDashboard, LogOut, GraduationCap, Menu, X } from 'lucide-react';
 import '../App.css';
 
-// Fixed paths to match lowercase convention used in App.js routing
 const collegesList = [
   { name: 'College of Engineering', path: '/colleges/engineering' },
   { name: 'College of Arts and Sciences', path: '/colleges/cas' },
@@ -51,7 +50,7 @@ const Dashboard = ({ onLogout }) => {
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <Trash2 size={24} color="#4ade80" /> 
-            <span className="logo-text">AdminPanel</span>
+            <span className="logo-text">Admin Panel</span>
           </div>
         </div>
         
