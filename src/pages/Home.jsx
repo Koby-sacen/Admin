@@ -163,6 +163,7 @@ const Home = () => {
             return match ? parseFloat(match[1]) : 0;
           };
 
+          // VOLUME CALCULATION USING m³ CONSTANTS: Paper=0.0004, Plastic=0.0012, Organic=0.0006, Inorganic=0.0005, Toxic=0.0001
           const orgVol = getVol('Organic');
           const papVol = getVol('Paper');
           const plaVol = getVol('Plastic');
@@ -219,13 +220,14 @@ const Home = () => {
         scans: timelineCounts[date] 
       })));
       
-      // Update the breakdown state (Labels still say kg in UI, but logic now maps to Liters from directVolume)
+      // Update the breakdown state (Labels displaying in m³)
+      // Conversion: Liters to m³ is divide by 1000
       const volumeBreakdown = {
-        organic: breakdown.organic.toFixed(2),
-        paper: breakdown.paper.toFixed(2),
-        plastic: breakdown.plastic.toFixed(2),
-        inorganic: breakdown.inorganic.toFixed(2),
-        toxic: breakdown.toxic.toFixed(2)
+        organic: (breakdown.organic / 1000).toFixed(4),
+        paper: (breakdown.paper / 1000).toFixed(4),
+        plastic: (breakdown.plastic / 1000).toFixed(4),
+        inorganic: (breakdown.inorganic / 1000).toFixed(4),
+        toxic: (breakdown.toxic / 1000).toFixed(4)
       };
 
       setTypeBreakdown(volumeBreakdown);
@@ -233,7 +235,7 @@ const Home = () => {
         totalItems: wasteCount,
         totalUsers: userSnapshot.size,
         totalWeight: (totalWeightGrams / 1000).toFixed(3), // Increased precision to 3 decimals to catch grams better
-        totalVolume: overallVolume.toFixed(2) // Save total volume
+        totalVolume: (overallVolume / 1000).toFixed(4) // Save total volume in m³
       });
     };
 
@@ -261,7 +263,7 @@ const Home = () => {
     doc.setFontSize(18);
     doc.text(`Environmental Analytics Report (${filterType.toUpperCase()})`, 40, 40);
     doc.setFontSize(11);
-    doc.text(`Total Scans: ${stats.totalItems} | Total Weight: ${stats.totalWeight}kg | Total Volume: ${stats.totalVolume}L`, 40, 60);
+    doc.text(`Total Scans: ${stats.totalItems} | Total Weight: ${stats.totalWeight}kg | Total Volume: ${stats.totalVolume}m³`, 40, 60);
     
     const tableColumn = ["Date", "User", "Item", "Weight", "College", "Bin", "Address"];
     const tableRows = rawLogs.map(log => [
@@ -364,11 +366,11 @@ const Home = () => {
         </div>
         <div style={cardStyle}>
           <h3 style={{ color: '#6b7280', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Volume</h3>
-          <p style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 'bold', color: '#3B82F6', margin: '10px 0 0' }}>{stats.totalVolume} <span style={{ fontSize: '1rem', color: '#9ca3af' }}>L</span></p>
+          <p style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 'bold', color: '#3B82F6', margin: '10px 0 0' }}>{stats.totalVolume} <span style={{ fontSize: '1rem', color: '#9ca3af' }}>m³</span></p>
         </div>
       </div>
 
-      {/* --- GREEN METRICS TYPE BREAKDOWN (Now displaying Volume in Liters) --- */}
+      {/* --- GREEN METRICS TYPE BREAKDOWN (Now displaying Volume in m³) --- */}
       <div className="type-breakdown-grid" style={{ 
         display: 'grid', 
         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', 
@@ -390,7 +392,7 @@ const Home = () => {
           }}>
             <h4 style={{ margin: '0', color: '#6b7280', fontSize: '0.9rem' }}>{item.label} Volume</h4>
             <p style={{ fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: '800', color: '#111827', margin: '8px 0 0' }}>
-                {item.val} <span style={{fontSize: '0.8rem', color: '#9ca3af'}}>L</span>
+                {item.val} <span style={{fontSize: '0.8rem', color: '#9ca3af'}}>m³</span>
             </p>
           </div>
         ))}
