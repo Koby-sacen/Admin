@@ -5,21 +5,25 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend, RadarChart, PolarGrid, PolarAngleAxis, Radar
 } from 'recharts';
-import { School, Trash2, Scale, Users, Zap, Recycle, BarChart3 } from 'lucide-react';
+import { School, Trash2, Scale, Users, Zap, Recycle, BarChart3, Box, Activity } from 'lucide-react';
 import '../App.css';
 
 const COED = () => {
   const [binData, setBinData] = useState([]);
   const [userList, setUserList] = useState([]);
-  const [stats, setStats] = useState({ totalItems: 0, totalWeight: 0, uniqueContributors: 0, avgRecyclability: 0 });
-
-  // NEW STATES FOR UPDATED VISUALS
-  const [energyData, setEnergyData] = useState([]);
-  const [typeBreakdown, setTypeBreakdown] = useState({
-    organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0
+  const [stats, setStats] = useState({ 
+    totalItems: 0, 
+    totalWeight: 0, 
+    uniqueContributors: 0, 
+    avgRecyclability: 0,
+    totalVolume: 0 
   });
 
-  // Responsive State
+  const [energyData, setEnergyData] = useState([]);
+  const [typeBreakdown, setTypeBreakdown] = useState({
+    organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0, inorganic: 0
+  });
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -39,60 +43,56 @@ const COED = () => {
 
   useEffect(() => {
     const fetchCOEDData = async () => {
-      // 1. Fetch Waste Collection filtered by College of Education
       const wasteRef = collection(db, 'waste_collection');
       const q = query(wasteRef, where('location.detectedCollege', '==', 'College of Education'));
       const wasteSnapshot = await getDocs(q);
       
       const binCounts = {};
       const energyLevels = { high: 0, medium: 0, low: 0 };
-      const breakdown = { organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0 };
+      const breakdown = { organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0, inorganic: 0 };
       
       let totalWeightGrams = 0;
       let totalRecycleRate = 0;
+      let overallVolumeLiters = 0;
       const contributors = new Set();
       const records = [];
 
       wasteSnapshot.forEach((doc) => {
         const data = doc.data();
-        
-        // Count Bin Types
         const bin = data.binData || 'Unsorted';
         binCounts[bin] = (binCounts[bin] || 0) + 1;
 
-        // ADVANCED DATA PARSING (Visual Enhancement)
-        if (data.wasteList && Array.isArray(data.wasteList)) {
-            data.wasteList.forEach(item => {
-                const lower = item.toLowerCase();
-                if (lower.includes('toxic')) breakdown.toxic++;
-                else if (lower.includes('medical')) breakdown.medical++;
-                else if (lower.includes('paper')) breakdown.paper++;
-                else if (lower.includes('organic')) breakdown.organic++;
-                else if (lower.includes('recyclable') || lower.includes('plastic')) breakdown.plastic++;
-                else breakdown.residual++;
-            });
-        }
+        // --- VOLUME EXTRACTION LOGIC ---
+        const volStr = data.directVolume || "";
+        const getVol = (cat) => {
+          const regex = new RegExp(`${cat}:\\s*(\\d+(\\.\\d+)?)\\s*Liters`, "i");
+          const match = volStr.match(regex);
+          return match ? parseFloat(match[1]) : 0;
+        };
 
-        // Process Energy Level for the Radar Chart
+        const orgVol = getVol('Organic');
+        const papVol = getVol('Paper');
+        const plaVol = getVol('Plastic');
+        const inoVol = getVol('Inorganic');
+        const toxVol = getVol('Toxic');
+
+        breakdown.organic += orgVol;
+        breakdown.paper += papVol;
+        breakdown.plastic += plaVol;
+        breakdown.inorganic += inoVol;
+        breakdown.toxic += toxVol;
+        overallVolumeLiters += (orgVol + papVol + plaVol + inoVol + toxVol);
+
         const eLevel = data.energyLevel?.toLowerCase() || 'low';
         if (energyLevels[eLevel] !== undefined) energyLevels[eLevel]++;
 
-        // Recyclability tracking
-        const rate = parseInt(data.recyclabilityRate) || 0;
-        totalRecycleRate += rate;
+        totalRecycleRate += (parseInt(data.recyclabilityRate) || 0);
 
-        // UPDATED WEIGHT LOGIC: Robust parsing for grams vs kg
         const weightRaw = String(data.totalWeight || '0').toLowerCase();
         const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
         const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
-        
-        if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
-            totalWeightGrams += (weightValue * 1000);
-        } else {
-            totalWeightGrams += weightValue;
-        }
+        totalWeightGrams += weightRaw.includes('kg') ? (weightValue * 1000) : weightValue;
 
-        // Track Contributors
         if (data.userId) contributors.add(data.userId);
 
         records.push({
@@ -103,187 +103,214 @@ const COED = () => {
         });
       });
 
-      // 2. Formatting Charts
-      setBinData(Object.keys(binCounts).map(name => ({ 
-        name, 
-        value: binCounts[name] 
-      })));
+      // Convert to Cubic Meters
+      setTypeBreakdown({
+        organic: (breakdown.organic / 1000).toFixed(4),
+        paper: (breakdown.paper / 1000).toFixed(4),
+        plastic: (breakdown.plastic / 1000).toFixed(4),
+        inorganic: (breakdown.inorganic / 1000).toFixed(4),
+        toxic: (breakdown.toxic / 1000).toFixed(4),
+      });
 
+      setBinData(Object.keys(binCounts).map(name => ({ name, value: binCounts[name] })));
       setEnergyData([
-        { subject: 'High (Processing)', A: energyLevels.high },
-        { subject: 'Med (Sorting)', A: energyLevels.medium },
-        { subject: 'Low (Manual)', A: energyLevels.low },
+        { subject: 'Processing', A: energyLevels.high },
+        { subject: 'Sorting', A: energyLevels.medium },
+        { subject: 'Manual', A: energyLevels.low },
       ]);
-
-      setTypeBreakdown(breakdown);
 
       setStats({
         totalItems: wasteSnapshot.size,
         totalWeight: (totalWeightGrams / 1000).toFixed(2),
         uniqueContributors: contributors.size,
-        avgRecyclability: wasteSnapshot.size > 0 ? (totalRecycleRate / wasteSnapshot.size).toFixed(0) : 0
+        avgRecyclability: wasteSnapshot.size > 0 ? (totalRecycleRate / wasteSnapshot.size).toFixed(0) : 0,
+        totalVolume: (overallVolumeLiters / 1000).toFixed(4)
       });
-
-      // Reversed to show the absolute latest at the top
       setUserList(records.slice(-5).reverse());
     };
 
     fetchCOEDData();
   }, []);
 
+  const cardStyle = {
+    backgroundColor: '#fff',
+    borderRadius: '16px',
+    padding: '24px',
+    textAlign: 'center',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
+
   return (
-    <div className="home-stats" style={{ padding: isMobile ? '15px' : '25px', backgroundColor: '#ecfeff', minHeight: '100vh' }}>
-      <div className="header-flex" style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '10px' }}>
+    <div className="home-stats" style={{ padding: isMobile ? '10px' : '20px', backgroundColor: '#ecfeff', minHeight: '100vh' }}>
+      {/* HEADER SECTION */}
+      <div className="header-flex" style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap' }}>
         <School size={isMobile ? 32 : 40} color="#06b6d4" />
-        <div style={{ marginLeft: isMobile ? '0px' : '15px' }}>
+        <div style={{ marginLeft: '15px' }}>
           <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.8rem', color: '#164e63' }}>College of Education</h1>
-          <p style={{ margin: 0, color: '#0891b2', fontSize: isMobile ? '0.85rem' : '1rem' }}>Sustainability & Environmental Education Hub</p>
+          <p style={{ margin: 0, color: '#0891b2', fontSize: isMobile ? '0.85rem' : '1rem' }}>Sustainability Hub</p>
         </div>
       </div>
 
-      {/* --- STAT CARDS --- */}
-      <div className="stats-grid" style={{ 
+      {/* TOP STATS GRID - 5 COLUMNS */}
+      <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', 
         gap: '15px', 
-        marginBottom: '30px' 
+        marginBottom: '25px' 
       }}>
-        <div className="stat-card" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <div className="card-icon"><Trash2 size={24} color="#06b6d4" /></div>
-          <h3 style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '10px' }}>COED Total Scans</h3>
-          <p className="stat-number" style={{ fontSize: '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalItems}</p>
+        <div style={{ ...cardStyle, padding: '20px' }}>
+          <Trash2 size={24} color="#06b6d4" />
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total Scans</h3>
+          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.totalItems}</p>
         </div>
-        <div className="stat-card weight-card" style={{ borderLeft: '4px solid #06b6d4', backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <div className="card-icon"><Scale size={24} color="#06b6d4" /></div>
-          <h3 style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '10px' }}>Total Weight Collected</h3>
-          <p className="stat-number" style={{ fontSize: '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalWeight} <span className="unit" style={{ fontSize: '0.9rem' }}>kg</span></p>
+        <div style={{ ...cardStyle, padding: '20px', borderLeft: '4px solid #06b6d4' }}>
+          <Scale size={24} color="#06b6d4" />
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total Weight (kg)</h3>
+          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.totalWeight}</p>
         </div>
-        <div className="stat-card" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <div className="card-icon"><Recycle size={24} color="#10b981" /></div>
-          <h3 style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '10px' }}>Avg. Recyclability</h3>
-          <p className="stat-number" style={{ fontSize: '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.avgRecyclability}%</p>
+        <div style={{ ...cardStyle, padding: '20px', borderLeft: '4px solid #0891b2' }}>
+          <Box size={24} color="#0891b2" />
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total Volume (m³)</h3>
+          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.totalVolume}</p>
         </div>
-        <div className="stat-card user-card" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <div className="card-icon"><Users size={24} color="#06b6d4" /></div>
-          <h3 style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '10px' }}>Total Contributors</h3>
-          <p className="stat-number" style={{ fontSize: '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
+        <div style={{ ...cardStyle, padding: '20px' }}>
+          <Recycle size={24} color="#10b981" />
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Recyclability</h3>
+          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.avgRecyclability}%</p>
+        </div>
+        <div style={{ ...cardStyle, padding: '20px' }}>
+          <Users size={24} color="#f59e0b" />
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Students</h3>
+          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>
 
-      <div className="charts-main-container" style={{ 
+      {/* VOLUME BREAKDOWN GRID (m3) - 5 COLUMNS */}
+      <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', 
+        gap: '15px', 
+        marginBottom: '25px' 
+      }}>
+        <div style={{ ...cardStyle, borderTop: '4px solid #10b981' }}>
+          <h4 style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0' }}>Organic Vol.</h4>
+          <p style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.organic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.75rem' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #06b6d4' }}>
+          <h4 style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0' }}>Paper Vol.</h4>
+          <p style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.paper}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.75rem' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #f59e0b' }}>
+          <h4 style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0' }}>Plastic Vol.</h4>
+          <p style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.plastic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.75rem' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #6b7280' }}>
+          <h4 style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0' }}>Inorganic Vol.</h4>
+          <p style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.inorganic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.75rem' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #ef4444' }}>
+          <h4 style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0' }}>Toxic Vol.</h4>
+          <p style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.toxic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.75rem' }}>m³</span>
+        </div>
+      </div>
+
+      {/* MAIN CHARTS CONTAINER */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', 
         gap: '20px', 
         marginBottom: '20px' 
       }}>
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#164e63' }}>Waste Segregation Mix</h3>
+        <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+          <h3 style={{ color: '#164e63', marginBottom: '15px' }}>Segregation Mix</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie
-                data={binData}
-                innerRadius={isMobile ? 50 : 70}
-                outerRadius={isMobile ? 70 : 90}
-                paddingAngle={5}
-                dataKey="value"
-                label={!isMobile}
-              >
-                {binData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBinColor(entry.name)} />
-                ))}
+              <Pie data={binData} innerRadius={70} outerRadius={90} paddingAngle={5} dataKey="value">
+                {binData.map((entry, i) => <Cell key={i} fill={getBinColor(entry.name)} />)}
               </Pie>
-              <Tooltip />
-              <Legend />
+              <Tooltip /><Legend verticalAlign="bottom" />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#164e63' }}>Processing Requirements</h3>
+        <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+          <h3 style={{ color: '#164e63', marginBottom: '15px' }}>COED Processing Load</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "60%" : "80%"} data={energyData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="subject" tick={{fontSize: 12}} />
-              <Radar name="Energy Level" dataKey="A" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.6} />
+            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={energyData}>
+              <PolarGrid /><PolarAngleAxis dataKey="subject" tick={{fontSize: 12}} />
+              <Radar name="Load" dataKey="A" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.6} />
               <Tooltip />
             </RadarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
+      {/* BOTTOM GRID */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', 
         gap: '20px' 
       }}>
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+        <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-            <BarChart3 size={20} color="#06b6d4" />
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#164e63' }}>Material Classification</h3>
+            <BarChart3 size={18} color="#06b6d4" />
+            <h3 style={{ margin: 0, fontSize: '1rem', color: '#164e63' }}>Material Volume (m³)</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
-                { name: 'Organic', val: typeBreakdown.organic },
-                { name: 'Paper', val: typeBreakdown.paper },
-                { name: 'Plastic', val: typeBreakdown.plastic },
-                { name: 'Toxic', val: typeBreakdown.toxic },
-                { name: 'Resid.', val: typeBreakdown.residual },
+                { name: 'Org', val: parseFloat(typeBreakdown.organic), fill: '#10b981' },
+                { name: 'Pap', val: parseFloat(typeBreakdown.paper), fill: '#06b6d4' },
+                { name: 'Pla', val: parseFloat(typeBreakdown.plastic), fill: '#f59e0b' },
+                { name: 'Ino', val: parseFloat(typeBreakdown.inorganic), fill: '#6b7280' },
+                { name: 'Tox', val: parseFloat(typeBreakdown.toxic), fill: '#ef4444' },
             ]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="val">
-                { [0,1,2,3,4].map((i) => (
-                  <Cell key={i} fill={['#10b981', '#06b6d4', '#f59e0b', '#ef4444', '#6b7280'][i]} />
-                )) }
-              </Bar>
+              <XAxis dataKey="name" tick={{fontSize: 12}} /><YAxis tick={{fontSize: 12}} /><Tooltip />
+              <Bar dataKey="val" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#164e63' }}>Recent Submissions</h3>
-          <div className="user-table-container" style={{ overflowX: 'auto' }}>
-            <table className="user-table" style={{ width: '100%', minWidth: '300px', marginTop: '10px', textAlign: 'left', borderCollapse: 'collapse' }}>
+        <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ fontSize: '1rem', color: '#164e63', margin: 0 }}>Latest Submissions</h3>
+            <Activity size={18} color="#06b6d4" />
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ color: '#64748b', borderBottom: '2px solid #f1f5f9', fontSize: '0.8rem' }}>
-                  <th style={{ padding: '12px' }}>User</th>
+                <tr style={{ textAlign: 'left', borderBottom: '2px solid #f1f5f9', color: '#64748b' }}>
+                  <th style={{ paddingBottom: '10px' }}>User</th>
                   <th>Category</th>
                   <th style={{ textAlign: 'center' }}>Impact</th>
                 </tr>
               </thead>
               <tbody>
-                {userList.length > 0 ? (
-                  userList.map((user, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '12px' }}>
-                        <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.85rem' }}>{user.userName}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{user.date}</div>
-                      </td>
-                      <td>
-                        <span className="badge" style={{ 
-                            backgroundColor: getBinColor(user.wasteType) + '15', 
-                            color: getBinColor(user.wasteType), 
-                            padding: '4px 10px', 
-                            borderRadius: '20px', 
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            whiteSpace: 'nowrap'
-                        }}>
-                          {user.wasteType}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {user.energy === 'high' ? <Zap size={14} color="#ef4444" /> : <Zap size={14} color="#10b981" />}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No records.</td>
+                {userList.map((user, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 0' }}>
+                      <div style={{ fontWeight: '600', color: '#164e63' }}>{user.userName}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{user.date}</div>
+                    </td>
+                    <td>
+                      <span style={{ backgroundColor: getBinColor(user.wasteType) + '15', color: getBinColor(user.wasteType), padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>
+                        {user.wasteType}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <Zap size={14} color={user.energy === 'high' ? "#ef4444" : "#10b981"} />
+                    </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>

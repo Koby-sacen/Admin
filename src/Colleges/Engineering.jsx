@@ -5,18 +5,18 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, Radar
 } from 'recharts';
-import { HardHat, Trash2, Scale, Users, Zap, Recycle, Activity, AlertTriangle } from 'lucide-react';
+import { HardHat, Trash2, Scale, Users, Zap, Recycle, Activity, AlertTriangle, Box } from 'lucide-react';
 import '../App.css';
 
 const Engineering = () => {
   const [binData, setBinData] = useState([]);
   const [userList, setUserList] = useState([]);
-  const [stats, setStats] = useState({ totalItems: 0, totalWeight: 0, uniqueContributors: 0, avgRecyclability: 0 });
+  const [stats, setStats] = useState({ totalItems: 0, totalWeight: 0, uniqueContributors: 0, avgRecyclability: 0, totalVolume: 0 });
   
   // ADVANCED ANALYTICS STATES
   const [energyData, setEnergyData] = useState([]);
   const [typeBreakdown, setTypeBreakdown] = useState({
-    organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0
+    organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0, inorganic: 0
   });
 
   // RESPONSIVE SCREEN STATE
@@ -48,10 +48,11 @@ const Engineering = () => {
       
       const binCounts = {};
       const energyLevels = { high: 0, medium: 0, low: 0 };
-      const breakdown = { organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0 };
+      const breakdown = { organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0, inorganic: 0 };
       
       let totalWeightGrams = 0;
       let totalRecycleRate = 0;
+      let overallVolumeLiters = 0;
       const contributors = new Set();
       const records = [];
 
@@ -59,6 +60,28 @@ const Engineering = () => {
         const data = doc.data();
         const bin = data.binData || 'Unsorted';
         binCounts[bin] = (binCounts[bin] || 0) + 1;
+
+        // --- CUBIC METER VOLUME EXTRACTION LOGIC ---
+        const volStr = data.directVolume || "";
+        const getVol = (cat) => {
+          const regex = new RegExp(`${cat}:\\s*(\\d+(\\.\\d+)?)\\s*Liters`, "i");
+          const match = volStr.match(regex);
+          return match ? parseFloat(match[1]) : 0;
+        };
+
+        const orgVol = getVol('Organic');
+        const papVol = getVol('Paper');
+        const plaVol = getVol('Plastic');
+        const inoVol = getVol('Inorganic');
+        const toxVol = getVol('Toxic');
+
+        breakdown.organic += orgVol;
+        breakdown.paper += papVol;
+        breakdown.plastic += plaVol;
+        breakdown.inorganic += inoVol;
+        breakdown.toxic += toxVol;
+        overallVolumeLiters += (orgVol + papVol + plaVol + inoVol + toxVol);
+        // -------------------------------------------
 
         // 1. Waste List Breakdown (Detailed Material Analysis)
         if (data.wasteList && Array.isArray(data.wasteList)) {
@@ -117,13 +140,25 @@ const Engineering = () => {
         { subject: 'Low (Manual)', A: energyLevels.low, fullMark: wasteSnapshot.size },
       ]);
 
-      setTypeBreakdown(breakdown);
+      // Convert breakdown Liter values to Cubic Meters (m3) for the display
+      const m3Breakdown = {
+        organic: (breakdown.organic / 1000).toFixed(4),
+        paper: (breakdown.paper / 1000).toFixed(4),
+        plastic: (breakdown.plastic / 1000).toFixed(4),
+        inorganic: (breakdown.inorganic / 1000).toFixed(4),
+        toxic: (breakdown.toxic / 1000).toFixed(4),
+        medical: breakdown.medical, // Keep count if no volume logic for medical
+        residual: breakdown.residual // Keep count if no volume logic for residual
+      };
+
+      setTypeBreakdown(m3Breakdown);
 
       setStats({
         totalItems: wasteSnapshot.size,
         totalWeight: (totalWeightGrams / 1000).toFixed(2),
         uniqueContributors: contributors.size,
-        avgRecyclability: wasteSnapshot.size > 0 ? (totalRecycleRate / wasteSnapshot.size).toFixed(0) : 0
+        avgRecyclability: wasteSnapshot.size > 0 ? (totalRecycleRate / wasteSnapshot.size).toFixed(0) : 0,
+        totalVolume: (overallVolumeLiters / 1000).toFixed(4)
       });
 
       setUserList(records.slice(-5).reverse());
@@ -131,6 +166,18 @@ const Engineering = () => {
 
     fetchEngineeringData();
   }, []);
+
+  const cardStyle = {
+    backgroundColor: '#fff',
+    borderRadius: '16px',
+    padding: '24px',
+    textAlign: 'center',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
 
   return (
     <div className="home-stats" style={{ padding: isMobile ? '10px' : '20px', backgroundColor: '#faeeee', minHeight: '100vh' }}>
@@ -144,13 +191,13 @@ const Engineering = () => {
 
       <div className="stats-grid" style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', 
         gap: '15px', 
         marginBottom: '25px' 
       }}>
         <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Trash2 size={24} color="#0284c7" /></div>
-          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total COE Scans</h3>
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total COENG Scans</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalItems}</p>
         </div>
         
@@ -158,6 +205,12 @@ const Engineering = () => {
           <div className="card-icon"><Scale size={24} color="#0284c7" /></div>
           <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total Weight</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalWeight} <span className="unit" style={{ fontSize: '0.8rem' }}>kg</span></p>
+        </div>
+
+        <div className="stat-card" style={{ borderLeft: '4px solid #3b82f6', padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+          <div className="card-icon"><Box size={24} color="#3b82f6" /></div>
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Total Volume</h3>
+          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalVolume} <span className="unit" style={{ fontSize: '0.8rem' }}>m³</span></p>
         </div>
 
         <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
@@ -170,6 +223,40 @@ const Engineering = () => {
           <div className="card-icon"><Users size={24} color="#f59e0b" /></div>
           <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Engineers</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
+        </div>
+      </div>
+
+      {/* --- CUBIC METER VOLUME BREAKDOWN CARDS (AS PER IMAGE_93F254.PNG) --- */}
+      <div className="volume-breakdown-grid" style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', 
+        gap: '15px', 
+        marginBottom: '25px' 
+      }}>
+        <div style={{ ...cardStyle, borderTop: '4px solid #10b981' }}>
+          <h4 style={{ color: '#64748b', fontSize: '1rem', margin: '0 0 10px 0' }}>Organic Volume</h4>
+          <p style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.organic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', marginTop: '10px' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #3b82f6' }}>
+          <h4 style={{ color: '#64748b', fontSize: '1rem', margin: '0 0 10px 0' }}>Paper Volume</h4>
+          <p style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.paper}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', marginTop: '10px' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #f59e0b' }}>
+          <h4 style={{ color: '#64748b', fontSize: '1rem', margin: '0 0 10px 0' }}>Plastic Volume</h4>
+          <p style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.plastic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', marginTop: '10px' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #64748b' }}>
+          <h4 style={{ color: '#64748b', fontSize: '1rem', margin: '0 0 10px 0' }}>Inorganic Volume</h4>
+          <p style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.inorganic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', marginTop: '10px' }}>m³</span>
+        </div>
+        <div style={{ ...cardStyle, borderTop: '4px solid #ef4444' }}>
+          <h4 style={{ color: '#64748b', fontSize: '1rem', margin: '0 0 10px 0' }}>Toxic Volume</h4>
+          <p style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', margin: '0' }}>{typeBreakdown.toxic}</p>
+          <span style={{ color: '#94a3b8', fontWeight: '600', marginTop: '10px' }}>m³</span>
         </div>
       </div>
 
@@ -220,19 +307,19 @@ const Engineering = () => {
         gap: '20px' 
       }}>
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ color: '#0c4a6e' }}>Volume by Category</h3>
+          <h3 style={{ color: '#0c4a6e' }}>Volume by Category (m³)</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
-                { name: 'Toxic', val: typeBreakdown.toxic, fill: '#ef4444' },
-                { name: 'Plastic', val: typeBreakdown.plastic, fill: '#3b82f6' },
-                { name: 'Paper', val: typeBreakdown.paper, fill: '#60a5fa' },
-                { name: 'Organic', val: typeBreakdown.organic, fill: '#10b981' },
-                { name: 'Residual', val: typeBreakdown.residual, fill: '#f59e0b' },
+                { name: 'Toxic', val: parseFloat(typeBreakdown.toxic), fill: '#ef4444' },
+                { name: 'Plastic', val: parseFloat(typeBreakdown.plastic), fill: '#3b82f6' },
+                { name: 'Paper', val: parseFloat(typeBreakdown.paper), fill: '#60a5fa' },
+                { name: 'Organic', val: parseFloat(typeBreakdown.organic), fill: '#10b981' },
+                { name: 'Inorganic', val: parseFloat(typeBreakdown.inorganic), fill: '#94a3b8' },
             ]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
               <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
-              <Tooltip />
+              <Tooltip formatter={(value) => [`${value} m³`, 'Volume']} />
               <Bar dataKey="val" radius={[4, 4, 0, 0]} animationDuration={1500} />
             </BarChart>
           </ResponsiveContainer>
