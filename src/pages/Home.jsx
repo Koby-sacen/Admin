@@ -5,6 +5,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, LineChart, Line, Legend 
 } from 'recharts';
+// ADDED FOR DOWNLOADS
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { FileSpreadsheet, FileText } from 'lucide-react';
 import '../App.css';
 
 // IMPORTING YOUR APP DATA TO FILTER BY COLLEGE NAME
@@ -29,6 +33,9 @@ const Home = () => {
   const [typeBreakdown, setTypeBreakdown] = useState({
     organic: 0, paper: 0, plastic: 0, inorganic: 0, toxic: 0
   });
+
+  // NEW STATE TO HOLD RAW LOGS FOR DOWNLOAD
+  const [rawLogs, setRawLogs] = useState([]);
 
   // RESPONSIVE STATE
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -70,6 +77,8 @@ const Home = () => {
       let wasteCount = 0;
       let overallVolume = 0; // Cumulative volume tracker
 
+      const tempRawLogs = []; // Temporary array to store filtered logs
+
       // Reset Breakdown (Now tracking weight/volume)
       const breakdown = { organic: 0, paper: 0, plastic: 0, inorganic: 0, toxic: 0 };
 
@@ -83,9 +92,9 @@ const Home = () => {
           
           // --- UPDATED WEIGHT PARSING LOGIC TO HANDLE G AND KG ACCURATELY ---
           const weightRaw = String(data.totalWeight || '0').toLowerCase().replace(/,/g, '');
-          // This regex finds the number part correctly even for large values like 123.45
-          const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
-          let numericValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
+          // FIX: Improved Regex to find the LAST numeric sequence in the string (the total kilograms)
+          const weightMatches = weightRaw.match(/(\d+(\.\d+)?)/g);
+          let numericValue = weightMatches ? parseFloat(weightMatches[weightMatches.length - 1]) : 0;
           let weightInGrams = 0;
 
           if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
@@ -94,6 +103,40 @@ const Home = () => {
             weightInGrams = numericValue; // Assume grams otherwise
           }
           // -------------------------------------------------------
+
+          // UPDATE: LOOP THROUGH EVERY ITEM IN wasteList INSTEAD OF JUST TAKING data.item
+          if (data.wasteList && Array.isArray(data.wasteList)) {
+            data.wasteList.forEach((wasteItemString) => {
+               // Extract item-specific weight if available in string like "... (5g)"
+               const itemWeightMatch = wasteItemString.match(/\((\d+(?:\.\d+)?)(g|kg|kilograms|grams)\)/i);
+               let itemDisplayWeight = "N/A";
+               if (itemWeightMatch) {
+                 itemDisplayWeight = `${itemWeightMatch[1]} ${itemWeightMatch[2]}`;
+               }
+
+               // SAVE EVERY INDIVIDUAL ITEM FOR DOWNLOAD
+               tempRawLogs.push({
+                  date: createdAt.toLocaleString(),
+                  user: data.userName || 'Anonymous',
+                  item: wasteItemString,
+                  weight: itemDisplayWeight !== "N/A" ? itemDisplayWeight : weightRaw, 
+                  college: college,
+                  bin: data.binData || 'Unsorted',
+                  address: data.location?.address || 'N/A'
+              });
+            });
+          } else {
+            // Fallback if wasteList is missing
+            tempRawLogs.push({
+                date: createdAt.toLocaleString(),
+                user: data.userName || 'Anonymous',
+                item: data.item || 'N/A',
+                weight: weightRaw,
+                college: college,
+                bin: data.binData || 'Unsorted',
+                address: data.location?.address || 'N/A'
+            });
+          }
 
           // LOGIC UPDATE: CHECK IF COLLEGE IS IN THE OFFICIAL LIST
           if (collegeNames.includes(college)) {
@@ -146,6 +189,8 @@ const Home = () => {
       // 2. Fetch User Data
       const userSnapshot = await getDocs(collection(db, 'users'));
       
+      setRawLogs(tempRawLogs); // Update state for downloads
+
       // Formatting for Charts (Colleges Only)
       setCollegeData(Object.keys(collegeCounts).map(name => ({ 
         name, 
@@ -195,6 +240,46 @@ const Home = () => {
     fetchData();
   }, [filterType]); // RE-RUN WHEN FILTER CHANGES
 
+  // --- DOWNLOAD HANDLERS ---
+  const downloadCSV = () => {
+    if (rawLogs.length === 0) return;
+    const headers = ["Date", "User", "Item", "Weight", "College", "Bin", "Address"];
+    const rows = rawLogs.map(log => [
+        log.date, log.user, `"${log.item}"`, log.weight, log.college, log.bin, `"${log.address}"`
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Environmental_Report_${filterType}.csv`;
+    link.click();
+  };
+
+  const downloadPDF = () => {
+    const doc = new jsPDF('l', 'pt', 'a4');
+    doc.setFontSize(18);
+    doc.text(`Environmental Analytics Report (${filterType.toUpperCase()})`, 40, 40);
+    doc.setFontSize(11);
+    doc.text(`Total Scans: ${stats.totalItems} | Total Weight: ${stats.totalWeight}kg | Total Volume: ${stats.totalVolume}L`, 40, 60);
+    
+    const tableColumn = ["Date", "User", "Item", "Weight", "College", "Bin", "Address"];
+    const tableRows = rawLogs.map(log => [
+        log.date, log.user, log.item, log.weight, log.college, log.bin, log.address
+    ]);
+
+    autoTable(doc, {
+      startY: 80,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129] },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: { 2: { cellWidth: 150 } } // Give more room for the Item column
+    });
+    doc.save(`Environmental_Report_${filterType}.pdf`);
+  };
+
   // --- ADDED PERMANENT COLOR MAPPING LOGIC ---
   const getCollegeColor = (name) => {
     if (name.includes('Arts and Sciences')) return '#ffff53'; // Yellow
@@ -220,29 +305,41 @@ const Home = () => {
       
       <div style={{ marginBottom: '40px', textAlign: 'center' }}>
         <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem', color: '#111827', fontWeight: '800', marginBottom: '20px' }}>Environmental Analytics</h1>
-        {/* --- TIME FILTER TOGGLE --- */}
-        <div className="filter-container" style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {['week', 'month', 'year', 'lastYear'].map((type) => (
-            <button 
-              key={type}
-              onClick={() => setFilterType(type)}
-              style={{
-                padding: isMobile ? '8px 16px' : '10px 24px',
-                borderRadius: '12px',
-                border: 'none',
-                backgroundColor: filterType === type ? '#10B981' : '#fff',
-                color: filterType === type ? 'white' : '#6b7280',
-                boxShadow: filterType === type ? '0 10px 15px -3px rgba(16, 185, 129, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
-                cursor: 'pointer',
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: '600',
-                transition: 'all 0.2s ease',
-                textTransform: 'capitalize'
-              }}
-            >
-              {type === 'lastYear' ? 'Last Year' : `This ${type}`}
-            </button>
-          ))}
+        
+        {/* --- TIME FILTER AND DOWNLOADS --- */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
+            <div className="filter-container" style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {['week', 'month', 'year', 'lastYear'].map((type) => (
+                <button 
+                key={type}
+                onClick={() => setFilterType(type)}
+                style={{
+                    padding: isMobile ? '8px 16px' : '10px 24px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: filterType === type ? '#10B981' : '#fff',
+                    color: filterType === type ? 'white' : '#6b7280',
+                    boxShadow: filterType === type ? '0 10px 15px -3px rgba(16, 185, 129, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    fontSize: isMobile ? '12px' : '14px',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    textTransform: 'capitalize'
+                }}
+                >
+                {type === 'lastYear' ? 'Last Year' : `This ${type}`}
+                </button>
+            ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={downloadCSV} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', border: '1px solid #d1d5db', backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                    <FileSpreadsheet size={16} color="#10B981" /> Export CSV
+                </button>
+                <button onClick={downloadPDF} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', border: '1px solid #d1d5db', backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                    <FileText size={16} color="#EF4444" /> Export PDF
+                </button>
+            </div>
         </div>
       </div>
 
