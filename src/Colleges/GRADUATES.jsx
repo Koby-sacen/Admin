@@ -78,9 +78,12 @@ const GRADUATES = () => {
         const rate = parseInt(data.recyclabilityRate) || 0;
         totalRecycleRate += rate;
 
-        const weightMatch = data.totalWeight?.match(/(\d+(\.\d+)?)/);
+        // STANDARDIZED WEIGHT CALCULATION
+        const weightRaw = String(data.totalWeight || '0').toLowerCase();
+        const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
         const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
-        if (data.totalWeight?.toLowerCase().includes('kg')) {
+        
+        if (weightRaw.includes('kg')) {
             totalWeightGrams += (weightValue * 1000);
         } else {
             totalWeightGrams += weightValue;
@@ -103,9 +106,9 @@ const GRADUATES = () => {
       })));
 
       setEnergyData([
-        { subject: 'High energy', A: energyLevels.high },
-        { subject: 'Medium', A: energyLevels.medium },
-        { subject: 'Low energy', A: energyLevels.low },
+        { subject: 'High Impact', A: energyLevels.high },
+        { subject: 'Medium Impact', A: energyLevels.medium },
+        { subject: 'Low Impact', A: energyLevels.low },
       ]);
 
       setTypeBreakdown(breakdown);
@@ -123,10 +126,8 @@ const GRADUATES = () => {
     fetchGraduateData();
   }, []);
 
-  const COLORS = ['#eab308', '#facc15', '#fbbf24', '#d97706', '#b45309'];
-
   return (
-    <div className="home-stats" style={{ padding: isMobile ? '15px' : '25px', backgroundColor: '#e6e6e6', minHeight: '100vh' }}>
+    <div className="home-stats" style={{ padding: isMobile ? '15px' : '25px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <div className="header-flex" style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '30px', flexDirection: isMobile ? 'column' : 'row' }}>
         <GraduationCap size={isMobile ? 35 : 40} color="#eab308" />
         <div style={{ marginLeft: isMobile ? '0' : '15px', marginTop: isMobile ? '10px' : '0' }}>
@@ -193,7 +194,7 @@ const GRADUATES = () => {
         </div>
 
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Environmental Load (Radar)</h3>
+          <h3>Environmental Load Profile</h3>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "65%" : "80%"} data={energyData}>
               <PolarGrid />
@@ -217,17 +218,19 @@ const GRADUATES = () => {
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
-                { name: 'Organic', val: typeBreakdown.organic, fill: '#10b981' },
-                { name: 'Paper', val: typeBreakdown.paper, fill: '#3b82f6' },
-                { name: 'Plastic', val: typeBreakdown.plastic, fill: '#f59e0b' },
-                { name: 'Residual', val: typeBreakdown.residual, fill: '#6b7280' },
+                { name: 'Organic', val: typeBreakdown.organic },
+                { name: 'Paper', val: typeBreakdown.paper },
+                { name: 'Plastic', val: typeBreakdown.plastic },
+                { name: 'Residual', val: typeBreakdown.residual },
             ]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
               <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
               <Tooltip />
               <Bar dataKey="val">
-                { [0,1,2,3].map((i) => <Cell key={i} fill={['#10b981', '#3b82f6', '#f59e0b', '#6b7280'][i]} />) }
+                { [0,1,2,3].map((i) => (
+                  <Cell key={i} fill={['#10b981', '#3b82f6', '#f59e0b', '#6b7280'][i]} />
+                )) }
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -247,7 +250,7 @@ const GRADUATES = () => {
               <tbody>
                 {userList.length > 0 ? (
                   userList.map((user, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #fffdf0' }}>
+                    <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
                       <td style={{ padding: '12px' }}>
                         <div style={{ fontWeight: '600', color: '#422006', fontSize: isMobile ? '0.85rem' : '1rem' }}>{user.userName}</div>
                         <div style={{ fontSize: '0.7rem', color: '#a16207' }}>{user.date}</div>
@@ -271,7 +274,7 @@ const GRADUATES = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#a16207' }}>No graduate study activity found.</td>
+                    <td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#a16207' }}>No records found.</td>
                   </tr>
                 )}
               </tbody>

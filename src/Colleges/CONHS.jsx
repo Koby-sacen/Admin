@@ -13,13 +13,11 @@ const CONHS = () => {
   const [userList, setUserList] = useState([]);
   const [stats, setStats] = useState({ totalItems: 0, totalWeight: 0, uniqueContributors: 0, avgRecyclability: 0 });
 
-  // NEW STATES FOR ADVANCED ANALYTICS
   const [energyData, setEnergyData] = useState([]);
   const [typeBreakdown, setTypeBreakdown] = useState({
     organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0
   });
 
-  // Responsive State
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -39,7 +37,6 @@ const CONHS = () => {
 
   useEffect(() => {
     const fetchCONHSData = async () => {
-      // 1. Fetch Waste Collection filtered by College of Nursing & Health Sciences
       const wasteRef = collection(db, 'waste_collection');
       const q = query(wasteRef, where('location.detectedCollege', '==', 'College of Nursing & Health Sciences'));
       const wasteSnapshot = await getDocs(q);
@@ -56,21 +53,40 @@ const CONHS = () => {
       wasteSnapshot.forEach((doc) => {
         const data = doc.data();
         
-        // Count Bin Types
+        // --- WASTE CATEGORY PARSING ---
         const bin = data.binData || 'Unsorted';
         binCounts[bin] = (binCounts[bin] || 0) + 1;
 
-        // ADVANCED ANALYTICS PARSING
         if (data.wasteList && Array.isArray(data.wasteList)) {
             data.wasteList.forEach(item => {
                 const lower = item.toLowerCase();
-                if (lower.includes('medical') || lower.includes('mask') || lower.includes('gloves')) breakdown.medical++;
-                else if (lower.includes('toxic') || lower.includes('chemical')) breakdown.toxic++;
-                else if (lower.includes('plastic')) breakdown.plastic++;
-                else if (lower.includes('paper')) breakdown.paper++;
-                else if (lower.includes('organic')) breakdown.organic++;
-                else breakdown.residual++;
+                if (lower.includes('medical') || lower.includes('mask') || lower.includes('gloves') || lower.includes('syringe')) {
+                    breakdown.medical++;
+                } else if (lower.includes('toxic') || lower.includes('chemical')) {
+                    breakdown.toxic++;
+                } else if (lower.includes('plastic')) {
+                    breakdown.plastic++;
+                } else if (lower.includes('paper')) {
+                    breakdown.paper++;
+                } else if (lower.includes('organic')) {
+                    breakdown.organic++;
+                } else {
+                    breakdown.residual++;
+                }
             });
+        }
+
+        // --- ENHANCED WEIGHT CALCULATION LOGIC ---
+        // This regex extracts numbers even from strings like "Total Weight: 1.5kg" or "500 grams"
+        const weightRaw = String(data.totalWeight || '0').toLowerCase();
+        const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
+        const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
+        
+        if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
+            totalWeightGrams += (weightValue * 1000);
+        } else {
+            // Assume grams if no unit or if "g/grams" is specified
+            totalWeightGrams += weightValue;
         }
 
         const eLevel = data.energyLevel?.toLowerCase() || 'low';
@@ -78,14 +94,6 @@ const CONHS = () => {
 
         const rate = parseInt(data.recyclabilityRate) || 0;
         totalRecycleRate += rate;
-
-        const weightMatch = data.totalWeight?.match(/(\d+(\.\d+)?)/);
-        const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
-        if (data.totalWeight?.toLowerCase().includes('kg')) {
-            totalWeightGrams += (weightValue * 1000);
-        } else {
-            totalWeightGrams += weightValue;
-        }
 
         if (data.userId) contributors.add(data.userId);
 
@@ -97,34 +105,25 @@ const CONHS = () => {
         });
       });
 
-      // 2. Formatting Charts
-      setBinData(Object.keys(binCounts).map(name => ({ 
-        name, 
-        value: binCounts[name] 
-      })));
-
+      // Update States
+      setBinData(Object.keys(binCounts).map(name => ({ name, value: binCounts[name] })));
       setEnergyData([
-        { subject: 'High (Medical)', A: energyLevels.high },
+        { subject: 'Bio-Hazard', A: energyLevels.high },
         { subject: 'Medium', A: energyLevels.medium },
-        { subject: 'Low (Sanitary)', A: energyLevels.low },
+        { subject: 'Sanitary', A: energyLevels.low },
       ]);
-
       setTypeBreakdown(breakdown);
-
       setStats({
         totalItems: wasteSnapshot.size,
-        totalWeight: (totalWeightGrams / 1000).toFixed(2),
+        totalWeight: (totalWeightGrams / 1000).toFixed(2), // Always convert to kg for display
         uniqueContributors: contributors.size,
         avgRecyclability: wasteSnapshot.size > 0 ? (totalRecycleRate / wasteSnapshot.size).toFixed(0) : 0
       });
-
       setUserList(records.slice(-5).reverse());
     };
 
     fetchCONHSData();
   }, []);
-
-  const COLORS = ['#ff0c92', '#ec4899', '#f472b6', '#fb7185', '#fda4af'];
 
   return (
     <div className="home-stats" style={{ padding: isMobile ? '15px' : '25px', backgroundColor: '#fff1f2', minHeight: '100vh' }}>
@@ -136,7 +135,6 @@ const CONHS = () => {
         </div>
       </div>
 
-      {/* --- STAT CARDS --- */}
       <div className="stats-grid" style={{ 
         display: 'grid', 
         gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(140px, 1fr))' : 'repeat(4, 1fr)', 
@@ -148,11 +146,16 @@ const CONHS = () => {
           <h3 style={{ color: '#9f1239', fontSize: '0.85rem', marginTop: '10px' }}>CONHS Waste Scans</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalItems}</p>
         </div>
+        
+        {/* FIXED WEIGHT CARD */}
         <div className="stat-card weight-card" style={{ borderLeft: '4px solid #ff0c92', backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div className="card-icon"><Scale size={24} color="#f43f5e" /></div>
           <h3 style={{ color: '#9f1239', fontSize: '0.85rem', marginTop: '10px' }}>Health Science Waste</h3>
-          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalWeight} <span className="unit" style={{ fontSize: '0.9rem' }}>kg</span></p>
+          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>
+            {stats.totalWeight} <span className="unit" style={{ fontSize: '0.9rem' }}>kg</span>
+          </p>
         </div>
+
         <div className="stat-card" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div className="card-icon"><Recycle size={24} color="#10b981" /></div>
           <h3 style={{ color: '#9f1239', fontSize: '0.85rem', marginTop: '10px' }}>Recyclability Rate</h3>
@@ -172,7 +175,7 @@ const CONHS = () => {
         marginBottom: '20px' 
       }}>
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Segregation Mix</h3>
+          <h3 style={{ color: '#881337', fontSize: '1.1rem' }}>Segregation Mix</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -194,7 +197,7 @@ const CONHS = () => {
         </div>
 
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Waste Disposal Energy</h3>
+          <h3 style={{ color: '#881337', fontSize: '1.1rem' }}>Waste Disposal Energy</h3>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "60%" : "80%"} data={energyData}>
               <PolarGrid />
@@ -214,29 +217,31 @@ const CONHS = () => {
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
             <BarChart3 size={20} color="#f43f5e" />
-            <h3 style={{ margin: 0 }}>Medical vs General Breakdown</h3>
+            <h3 style={{ margin: 0, color: '#881337', fontSize: '1.1rem' }}>Medical vs General Breakdown</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
-                { name: 'Medical', val: typeBreakdown.medical, fill: '#f43f5e' },
-                { name: 'Toxic', val: typeBreakdown.toxic, fill: '#be123c' },
-                { name: 'Organic', val: typeBreakdown.organic, fill: '#10b981' },
-                { name: 'Plastic', val: typeBreakdown.plastic, fill: '#3b82f6' },
-                { name: 'Residual', val: typeBreakdown.residual, fill: '#6b7280' },
+                { name: 'Medical', val: typeBreakdown.medical },
+                { name: 'Toxic', val: typeBreakdown.toxic },
+                { name: 'Organic', val: typeBreakdown.organic },
+                { name: 'Plastic', val: typeBreakdown.plastic },
+                { name: 'Residual', val: typeBreakdown.residual },
             ]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
               <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
               <Tooltip />
               <Bar dataKey="val">
-                { [0,1,2,3,4].map((i) => <Cell key={i} fill={['#f43f5e', '#be123c', '#10b981', '#3b82f6', '#6b7280'][i]} />) }
+                { [0,1,2,3,4].map((i) => (
+                  <Cell key={i} fill={['#f43f5e', '#be123c', '#10b981', '#3b82f6', '#6b7280'][i]} />
+                )) }
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Recent CONHS Contributors</h3>
+          <h3 style={{ color: '#881337', fontSize: '1.1rem' }}>Recent CONHS Contributors</h3>
           <div className="user-table-container" style={{ overflowX: 'auto' }}>
             <table className="user-table" style={{ width: '100%', minWidth: '300px', marginTop: '10px', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>

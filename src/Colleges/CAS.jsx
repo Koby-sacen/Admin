@@ -5,7 +5,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, Radar
 } from 'recharts';
-import { Palette, Trash2, Scale, Users, Zap, Recycle, Activity } from 'lucide-react';
+import { Palette, Trash2, Scale, Users, Zap, Recycle, Activity, AlertTriangle } from 'lucide-react';
 import '../App.css';
 
 const CAS = () => {
@@ -19,6 +19,15 @@ const CAS = () => {
   const [typeBreakdown, setTypeBreakdown] = useState({
     organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0
   });
+
+  // RESPONSIVE SCREEN STATE (Updated to match Engineering logic)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Specific color mapping based on the name of the bin
   const getBinColor = (binName) => {
@@ -54,14 +63,16 @@ const CAS = () => {
         binCounts[bin] = (binCounts[bin] || 0) + 1;
 
         // PARSING ADVANCED DATA FIELDS
-        // 1. Waste List Breakdown
+        // 1. Waste List Breakdown (Updated to match Engineering logic)
         if (data.wasteList && Array.isArray(data.wasteList)) {
             data.wasteList.forEach(item => {
                 const lower = item.toLowerCase();
                 if (lower.includes('toxic')) breakdown.toxic++;
                 else if (lower.includes('medical')) breakdown.medical++;
-                else if (lower.includes('recyclable')) breakdown.plastic++;
-                else if (lower.includes('residual')) breakdown.residual++;
+                else if (lower.includes('recyclable') || lower.includes('plastic')) breakdown.plastic++;
+                else if (lower.includes('paper')) breakdown.paper++;
+                else if (lower.includes('organic')) breakdown.organic++;
+                else breakdown.residual++;
             });
         }
 
@@ -73,12 +84,17 @@ const CAS = () => {
         const rate = parseInt(data.recyclabilityRate) || 0;
         totalRecycleRate += rate;
 
-        const weightMatch = data.totalWeight?.match(/(\d+(\.\d+)?)/);
+        const weightRaw = String(data.totalWeight || '0').toLowerCase();
+        const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
         const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
-        // Check for kg vs grams
-        if (data.totalWeight?.toLowerCase().includes('kg')) {
+        
+        // Updated Weight Logic: Robust unit detection
+        if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
             totalWeightGrams += (weightValue * 1000);
+        } else if (weightRaw.includes('gram') || weightRaw.includes(' g')) {
+            totalWeightGrams += weightValue;
         } else {
+            // Defaulting to grams if unit is ambiguous to keep dashboard totals realistic
             totalWeightGrams += weightValue;
         }
 
@@ -96,7 +112,7 @@ const CAS = () => {
           userName: data.userName || 'Anonymous',
           wasteType: data.binData || 'General',
           date: dateStr,
-          item: data.item || 'N/A',
+          item: data.item || 'Multiple Items',
           energy: data.energyLevel || 'low'
         });
       });
@@ -112,9 +128,9 @@ const CAS = () => {
       })));
 
       setEnergyData([
-        { subject: 'High Energy', A: energyLevels.high, fullMark: wasteSnapshot.size },
-        { subject: 'Med Energy', A: energyLevels.medium, fullMark: wasteSnapshot.size },
-        { subject: 'Low Energy', A: energyLevels.low, fullMark: wasteSnapshot.size },
+        { subject: 'High (Industrial)', A: energyLevels.high, fullMark: wasteSnapshot.size },
+        { subject: 'Medium (Standard)', A: energyLevels.medium, fullMark: wasteSnapshot.size },
+        { subject: 'Low (Manual)', A: energyLevels.low, fullMark: wasteSnapshot.size },
       ]);
 
       setTypeBreakdown(breakdown);
@@ -133,82 +149,82 @@ const CAS = () => {
   }, []);
 
   return (
-    <div className="home-stats" style={{ padding: '15px', backgroundColor: '#fefff5', minHeight: '100vh' }}>
-      <div className="header-flex" style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '10px' }}>
+    <div className="home-stats" style={{ padding: isMobile ? '10px' : '20px', backgroundColor: '#fefff5', minHeight: '100vh' }}>
+      <div className="header-flex" style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap' }}>
         {/* Changed Icon to Palette for Arts & Sciences */}
-        <Palette size={40} color="#8b5cf6" /> 
-        <div style={{ flex: '1', minWidth: '250px' }}>
-            <h1 style={{ margin: 0, fontSize: 'clamp(1.2rem, 5vw, 1.8rem)', color: '#4c1d95' }}>College of Arts and Sciences Dashboard</h1>
-            <p style={{ margin: 0, color: '#7c3aed' }}>Creative Sustainability Analytics</p>
+        <Palette size={isMobile ? 32 : 40} color="#8b5cf6" /> 
+        <div style={{ marginLeft: '15px' }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.8rem', color: '#4c1d95' }}>College of Arts and Sciences Dashboard</h1>
+            <p style={{ margin: 0, color: '#7c3aed', fontSize: isMobile ? '0.8rem' : '1rem' }}>Creative Sustainability Analytics</p>
         </div>
       </div>
 
       <div className="stats-grid" style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
         gap: '15px', 
         marginBottom: '25px' 
       }}>
         <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Trash2 size={24} color="#8b5cf6" /></div>
-          <h3 style={{ fontSize: '0.9rem', color: '#6b7280' }}>Total CAS Scans</h3>
-          <p className="stat-number" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '5px 0' }}>{stats.totalItems}</p>
+          <h3 style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px' }}>Total CAS Scans</h3>
+          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalItems}</p>
         </div>
         
         {/* CAS Theme: Purple/Indigo border */}
         <div className="stat-card weight-card" style={{ borderLeft: '4px solid #8b5cf6', padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Scale size={24} color="#8b5cf6" /></div>
-          <h3 style={{ fontSize: '0.9rem', color: '#6b7280' }}>Total Weight</h3>
-          <p className="stat-number" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '5px 0' }}>{stats.totalWeight} <span className="unit" style={{ fontSize: '0.8rem' }}>kg</span></p>
+          <h3 style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px' }}>Total Weight</h3>
+          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.totalWeight} <span className="unit" style={{ fontSize: '0.8rem' }}>kg</span></p>
         </div>
 
-        <div className="stat-card user-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+        <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Recycle size={24} color="#10b981" /></div>
-          <h3 style={{ fontSize: '0.9rem', color: '#6b7280' }}>Recyclability</h3>
-          <p className="stat-number" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '5px 0' }}>{stats.avgRecyclability}%</p>
+          <h3 style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px' }}>Recyclability</h3>
+          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.avgRecyclability}%</p>
         </div>
 
         <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Users size={24} color="#f59e0b" /></div>
-          <h3 style={{ fontSize: '0.9rem', color: '#6b7280' }}>Contributors</h3>
-          <p className="stat-number" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '5px 0' }}>{stats.uniqueContributors}</p>
+          <h3 style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px' }}>Contributors</h3>
+          <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>
 
       <div className="charts-main-container" style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', 
         gap: '20px', 
         marginBottom: '20px' 
       }}>
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', minHeight: '350px' }}>
-          <h3>Waste Segregation (CAS)</h3>
+        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+          <h3 style={{ color: '#4c1d95' }}>Waste Segregation (CAS)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={binData}
-                innerRadius={60}
-                outerRadius={80}
+                innerRadius={isMobile ? 50 : 70}
+                outerRadius={isMobile ? 70 : 90}
                 paddingAngle={5}
                 dataKey="value"
-                label
+                label={!isMobile}
               >
                 {binData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={getBinColor(entry.name)} />
                 ))}
               </Pie>
               <Tooltip />
-              <Legend />
+              <Legend verticalAlign={isMobile ? "bottom" : "middle"} align={isMobile ? "center" : "right"} layout={isMobile ? "horizontal" : "vertical"} />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', minHeight: '350px' }}>
-          <h3>Disposal Energy Metrics</h3>
+        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+          <h3 style={{ color: '#4c1d95' }}>Disposal Energy Metrics</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={energyData}>
+            <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "60%" : "80%"} data={energyData}>
               <PolarGrid />
-              <PolarAngleAxis dataKey="subject" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: isMobile ? 10 : 12 }} />
               <Radar name="Items" dataKey="A" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} />
               <Tooltip />
             </RadarChart>
@@ -218,37 +234,38 @@ const CAS = () => {
 
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
         gap: '20px' 
       }}>
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', minHeight: '300px' }}>
-          <h3>Volume by Specific Category</h3>
+        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
+          <h3 style={{ color: '#4c1d95' }}>Volume by Specific Category</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
                 { name: 'Toxic', val: typeBreakdown.toxic, fill: '#ef4444' },
                 { name: 'Medical', val: typeBreakdown.medical, fill: '#8b5cf6' },
                 { name: 'Plastic', val: typeBreakdown.plastic, fill: '#3b82f6' },
+                { name: 'Paper', val: typeBreakdown.paper, fill: '#60a5fa' },
                 { name: 'Organic', val: typeBreakdown.organic, fill: '#10b981' },
                 { name: 'Residual', val: typeBreakdown.residual, fill: '#f59e0b' },
             ]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" fontSize={12} tick={{fill: '#666'}} />
-              <YAxis fontSize={12} tick={{fill: '#666'}} />
+              <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
+              <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
               <Tooltip />
-              <Bar dataKey="val" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="val" radius={[4, 4, 0, 0]} animationDuration={1500} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', overflowX: 'auto' }}>
+        <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>Recent CAS Activity</h3>
+            <h3 style={{ color: '#4c1d95' }}>Recent CAS Activity</h3>
             <Activity size={18} color="#8b5cf6" />
           </div>
           <div className="user-table-container" style={{ overflowX: 'auto' }}>
-            <table className="user-table" style={{ width: '100%', marginTop: '10px', textAlign: 'left', borderCollapse: 'collapse', minWidth: '300px' }}>
+            <table className="user-table" style={{ width: '100%', marginTop: '10px', textAlign: 'left', borderCollapse: 'collapse', minWidth: isMobile ? '300px' : 'auto' }}>
               <thead>
-                <tr style={{ color: '#666', borderBottom: '2px solid #f3f4f6' }}>
+                <tr style={{ color: '#6b7280', borderBottom: '2px solid #f1f5f9', fontSize: '0.9rem' }}>
                   <th style={{ padding: '10px' }}>User</th>
                   <th>Classification</th>
                   <th>Impact</th>
@@ -256,27 +273,25 @@ const CAS = () => {
               </thead>
               <tbody>
                 {userList.map((user, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #fafafa' }}>
+                  <tr key={idx} style={{ borderBottom: '1px solid #f8fafc' }}>
                     <td style={{ padding: '12px 10px' }}>
-                        <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>{user.userName}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{user.date}</div>
+                        <div style={{ fontWeight: '500', color: '#0f172a', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>{user.userName}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{user.date}</div>
                     </td>
                     <td>
                       <span className="badge" style={{ 
                           backgroundColor: getBinColor(user.wasteType) + '15', 
                           color: getBinColor(user.wasteType),
-                          padding: '4px 8px',
-                          borderRadius: '12px',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
                           fontSize: '0.7rem',
-                          fontWeight: '600',
-                          display: 'inline-block',
-                          whiteSpace: 'nowrap'
+                          fontWeight: '600'
                         }}>
                         {user.wasteType}
                       </span>
                     </td>
                     <td>
-                        {user.energy === 'high' ? <Zap size={14} color="#ef4444" /> : <Zap size={14} color="#10b981" />}
+                        {user.energy === 'high' ? <AlertTriangle size={14} color="#ef4444" /> : <Zap size={14} color="#10b981" />}
                     </td>
                   </tr>
                 ))}

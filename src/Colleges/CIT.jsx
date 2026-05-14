@@ -19,6 +19,7 @@ const CIT = () => {
     organic: 0, paper: 0, plastic: 0, toxic: 0, medical: 0, residual: 0
   });
 
+  // Specific color mapping for CIT (Industrial Tech Theme)
   const getBinColor = (binName) => {
     const name = binName.toLowerCase();
     if (name.includes('blue') || name.includes('recyclable') || name.includes('paper')) return '#3b82f6';
@@ -83,10 +84,12 @@ const CIT = () => {
         const rate = parseInt(data.recyclabilityRate) || 0;
         totalRecycleRate += rate;
 
-        // Calculate Weight (Support for "grams" vs "kg")
-        const weightMatch = data.totalWeight?.match(/(\d+(\.\d+)?)/);
+        // UPDATED WEIGHT LOGIC: Robust support for "grams" vs "kg"
+        const weightRaw = String(data.totalWeight || '0').toLowerCase();
+        const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
         const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
-        if (data.totalWeight?.toLowerCase().includes('kg')) {
+        
+        if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
             totalWeightGrams += (weightValue * 1000);
         } else {
             totalWeightGrams += weightValue;
@@ -110,9 +113,9 @@ const CIT = () => {
       })));
 
       setEnergyData([
-        { subject: 'High Energy', A: energyLevels.high },
-        { subject: 'Med Energy', A: energyLevels.medium },
-        { subject: 'Low Energy', A: energyLevels.low },
+        { subject: 'High (Ind.)', A: energyLevels.high },
+        { subject: 'Med (Std.)', A: energyLevels.medium },
+        { subject: 'Low (Man.)', A: energyLevels.low },
       ]);
 
       setTypeBreakdown(breakdown);
@@ -130,8 +133,6 @@ const CIT = () => {
 
     fetchCITData();
   }, []);
-
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
     <div className="home-stats" style={{ padding: '25px', backgroundColor: '#f0fdf4', minHeight: '100vh' }}>
@@ -183,9 +184,8 @@ const CIT = () => {
       </div>
 
       <div className="responsive-grid-2">
-        {/* --- PIE CHART: SEGREGATION IN CIT --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Waste Segregation Mix</h3>
+          <h3 style={{ color: '#064e3b', marginBottom: '15px' }}>Waste Segregation Mix</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -206,13 +206,12 @@ const CIT = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* --- RADAR CHART: ENERGY --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Processing Energy requirements</h3>
+          <h3 style={{ color: '#064e3b', marginBottom: '15px' }}>Processing Energy Requirements</h3>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={energyData}>
               <PolarGrid />
-              <PolarAngleAxis dataKey="subject" />
+              <PolarAngleAxis dataKey="subject" tick={{fontSize: 12}} />
               <Radar name="Items" dataKey="A" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
               <Tooltip />
             </RadarChart>
@@ -221,11 +220,10 @@ const CIT = () => {
       </div>
 
       <div className="responsive-bottom-grid">
-        {/* --- MATERIAL BAR CHART --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
             <BarChart3 size={20} color="#10b981" />
-            <h3 style={{ margin: 0 }}>CIT Material Breakdown</h3>
+            <h3 style={{ margin: 0, color: '#064e3b' }}>CIT Material Breakdown</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
@@ -236,19 +234,20 @@ const CIT = () => {
                 { name: 'Residual', val: typeBreakdown.residual, color: '#6b7280' },
             ]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
+              <XAxis dataKey="name" tick={{fontSize: 12}} />
               <YAxis />
               <Tooltip />
               <Bar dataKey="val">
-                { [0,1,2,3,4].map((i) => <Cell key={i} fill={['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#6b7280'][i]} />) }
+                { [0,1,2,3,4].map((i) => (
+                  <Cell key={i} fill={['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#6b7280'][i]} />
+                )) }
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* --- USER LIST --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3>Recent Users in CIT</h3>
+          <h3 style={{ color: '#064e3b', marginBottom: '15px' }}>Recent Users in CIT</h3>
           <div className="user-table-container" style={{ overflowX: 'auto' }}>
             <table className="user-table" style={{ width: '100%', marginTop: '10px', textAlign: 'left', borderCollapse: 'collapse', minWidth: '300px' }}>
               <thead>
@@ -263,7 +262,7 @@ const CIT = () => {
                   userList.map((user, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #fafafa' }}>
                       <td style={{ padding: '12px 10px' }}>
-                        <div style={{ fontWeight: '500' }}>{user.userName}</div>
+                        <div style={{ fontWeight: '500', color: '#111827' }}>{user.userName}</div>
                         <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{user.date}</div>
                       </td>
                       <td>

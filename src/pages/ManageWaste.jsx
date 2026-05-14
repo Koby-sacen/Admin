@@ -22,6 +22,19 @@ export default function ManageWaste() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Helper function to extract clean weight like "25g" or "190 grams"
+  const extractWeight = (text) => {
+    if (!text) return 'N/A';
+    const match = text.match(/\[W\](.*?)\[\/W\]/);
+    return match ? match[1] : text;
+  };
+
+  // Helper function to clean item names for downloads
+  const cleanItemName = (text) => {
+    if (!text) return 'Classified Item';
+    return text.replace(/\[W\].*?\[\/W\]/g, '').replace(/[()=]/g, '').trim();
+  };
+
   useEffect(() => {
     const fetchWasteLogs = async () => {
       try {
@@ -43,13 +56,21 @@ export default function ManageWaste() {
     fetchWasteLogs();
   }, []);
 
-  // Search filter logic
+  // Search filter logic - FIXED EXTRACTION & SEARCH
   useEffect(() => {
-    const results = logs.filter(log =>
-      log.item?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.location?.detectedCollege?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const results = logs.filter(log => {
+      // Clean string extraction for search consistency
+      const item = (log.item || log.wasteList || "").toLowerCase();
+      const user = (log.userName || "").toLowerCase();
+      const college = (log.location?.detectedCollege || "").toLowerCase();
+      const bin = (log.binData || "").toLowerCase();
+      const term = searchTerm.toLowerCase();
+
+      return item.includes(term) || 
+             user.includes(term) || 
+             college.includes(term) || 
+             bin.includes(term);
+    });
     setFilteredLogs(results);
   }, [searchTerm, logs]);
 
@@ -60,8 +81,8 @@ export default function ManageWaste() {
       log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : '',
       log.userName || '',
       log.binData || '',
-      log.item || '',
-      log.totalWeight || '',
+      cleanItemName(log.item || log.wasteList?.split('\n')[0]),
+      extractWeight(log.totalWeight || log.wasteList),
       log.location?.detectedCollege || '',
       `"${log.location?.address || ''}"`
     ]);
@@ -82,8 +103,8 @@ export default function ManageWaste() {
       log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : 'N/A',
       log.userName || 'Anonymous',
       log.binData || 'N/A',
-      log.item || 'N/A',
-      log.totalWeight || '0g',
+      cleanItemName(log.item || log.wasteList?.split('\n')[0]),
+      extractWeight(log.totalWeight || log.wasteList),
       log.location?.detectedCollege || 'N/A',
       log.recyclabilityRate || 'N/A',
       log.location?.address || 'N/A'
@@ -141,32 +162,33 @@ export default function ManageWaste() {
                 {/* Left: Date & Bin */}
                 <div className="log-meta">
                   <div className="log-date-box">
-                    <span className="month">{log.createdAt?.toDate().toLocaleDateString('en-US', {month: 'short'})}</span>
-                    <span className="day">{log.createdAt?.toDate().getDate()}</span>
+                    <span className="month">{log.createdAt?.toDate ? log.createdAt.toDate().toLocaleDateString('en-US', {month: 'short'}) : 'N/A'}</span>
+                    <span className="day">{log.createdAt?.toDate ? log.createdAt.toDate().getDate() : '--'}</span>
                   </div>
-                  <div className={`bin-indicator ${log.binData?.toLowerCase().includes('blue') ? 'blue' : 'general'}`}></div>
+                  {/* Fixed Bin Indicator logic to match your App's extraction */}
+                  <div className={`bin-indicator ${String(log.binData || '').toLowerCase().includes('blue') ? 'blue' : String(log.binData || '').toLowerCase().includes('yellow') ? 'yellow' : 'general'}`}></div>
                 </div>
 
                 {/* Center Left: Item Details */}
                 <div className="log-main-info">
-                  <h4 className="log-item-title">{log.item || 'Classified Item'}</h4>
+                  <h4 className="log-item-title">{(log.item || log.wasteList?.split('\n')[0] || 'Classified Item').replace(/\[W\].*?\[\/W\]/g, '').replace(/[()=]/g, '').trim()}</h4>
                   <div className="log-sub-details">
                     <span><User size={14} /> {log.userName || 'Anonymous'}</span>
-                    <span><Scale size={14} /> {log.totalWeight || 'N/A'}</span>
+                    <span><Scale size={14} /> {extractWeight(log.totalWeight || log.wasteList)}</span>
                     <span><MapPin size={14} /> {log.location?.detectedCollege || 'Campus'}</span>
                   </div>
                 </div>
 
                 {/* Center Right: College/Location Badge */}
                 <div className="log-location-badge">
-                   <p className="address-text">{log.location?.address?.substring(0, 45)}...</p>
+                    <p className="address-text">{(log.location?.address || "No address provided").substring(0, 45)}...</p>
                 </div>
 
                 {/* Right: Metrics & Arrow */}
                 <div className="log-metrics">
                   <div className="metric-pill">
-                     <span className="label">Recyclability</span>
-                     <span className="value">{log.recyclabilityRate || '0%'}</span>
+                      <span className="label">Recyclability</span>
+                      <span className="value">{log.recyclabilityRate || '0%'}</span>
                   </div>
                   <ChevronRight size={20} className="row-arrow" />
                 </div>
@@ -178,4 +200,3 @@ export default function ManageWaste() {
     </div>
   );
 }
-

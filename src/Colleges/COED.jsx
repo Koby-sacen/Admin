@@ -61,14 +61,15 @@ const COED = () => {
         binCounts[bin] = (binCounts[bin] || 0) + 1;
 
         // ADVANCED DATA PARSING (Visual Enhancement)
-        // Parse the wasteList array for specific material breakdown
         if (data.wasteList && Array.isArray(data.wasteList)) {
             data.wasteList.forEach(item => {
                 const lower = item.toLowerCase();
                 if (lower.includes('toxic')) breakdown.toxic++;
                 else if (lower.includes('medical')) breakdown.medical++;
-                else if (lower.includes('recyclable')) breakdown.plastic++;
-                else if (lower.includes('residual')) breakdown.residual++;
+                else if (lower.includes('paper')) breakdown.paper++;
+                else if (lower.includes('organic')) breakdown.organic++;
+                else if (lower.includes('recyclable') || lower.includes('plastic')) breakdown.plastic++;
+                else breakdown.residual++;
             });
         }
 
@@ -80,10 +81,12 @@ const COED = () => {
         const rate = parseInt(data.recyclabilityRate) || 0;
         totalRecycleRate += rate;
 
-        // Calculate Weight (Support for "grams" vs "kg" strings)
-        const weightMatch = data.totalWeight?.match(/(\d+(\.\d+)?)/);
+        // UPDATED WEIGHT LOGIC: Robust parsing for grams vs kg
+        const weightRaw = String(data.totalWeight || '0').toLowerCase();
+        const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
         const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
-        if (data.totalWeight?.toLowerCase().includes('kg')) {
+        
+        if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
             totalWeightGrams += (weightValue * 1000);
         } else {
             totalWeightGrams += weightValue;
@@ -107,9 +110,9 @@ const COED = () => {
       })));
 
       setEnergyData([
-        { subject: 'High Energy', A: energyLevels.high },
-        { subject: 'Med Energy', A: energyLevels.medium },
-        { subject: 'Low Energy', A: energyLevels.low },
+        { subject: 'High (Processing)', A: energyLevels.high },
+        { subject: 'Med (Sorting)', A: energyLevels.medium },
+        { subject: 'Low (Manual)', A: energyLevels.low },
       ]);
 
       setTypeBreakdown(breakdown);
@@ -127,8 +130,6 @@ const COED = () => {
 
     fetchCOEDData();
   }, []);
-
-  const COLORS = ['#06b6d4', '#22d3ee', '#67e8f9', '#a5f3fc', '#10b981'];
 
   return (
     <div className="home-stats" style={{ padding: isMobile ? '15px' : '25px', backgroundColor: '#ecfeff', minHeight: '100vh' }}>
@@ -175,9 +176,8 @@ const COED = () => {
         gap: '20px', 
         marginBottom: '20px' 
       }}>
-        {/* --- PIE CHART: SEGREGATION IN COED --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Waste Segregation Mix</h3>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#164e63' }}>Waste Segregation Mix</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -198,13 +198,12 @@ const COED = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* --- RADAR CHART: ENERGY --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Processing Requirements</h3>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#164e63' }}>Processing Requirements</h3>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "60%" : "80%"} data={energyData}>
               <PolarGrid />
-              <PolarAngleAxis dataKey="subject" />
+              <PolarAngleAxis dataKey="subject" tick={{fontSize: 12}} />
               <Radar name="Energy Level" dataKey="A" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.6} />
               <Tooltip />
             </RadarChart>
@@ -217,11 +216,10 @@ const COED = () => {
         gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', 
         gap: '20px' 
       }}>
-        {/* --- MATERIAL BAR CHART --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
             <BarChart3 size={20} color="#06b6d4" />
-            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Material Classification</h3>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#164e63' }}>Material Classification</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={[
@@ -236,15 +234,16 @@ const COED = () => {
               <YAxis fontSize={12} />
               <Tooltip />
               <Bar dataKey="val">
-                { [0,1,2,3,4].map((i) => <Cell key={i} fill={['#10b981', '#06b6d4', '#f59e0b', '#ef4444', '#6b7280'][i]} />) }
+                { [0,1,2,3,4].map((i) => (
+                  <Cell key={i} fill={['#10b981', '#06b6d4', '#f59e0b', '#ef4444', '#6b7280'][i]} />
+                )) }
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* --- USER ACTIVITY TABLE --- */}
         <div className="chart-item" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Recent Submissions</h3>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#164e63' }}>Recent Submissions</h3>
           <div className="user-table-container" style={{ overflowX: 'auto' }}>
             <table className="user-table" style={{ width: '100%', minWidth: '300px', marginTop: '10px', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>

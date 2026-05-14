@@ -85,9 +85,13 @@ const Engineering = () => {
         const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
         const weightValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
         
-        if (weightRaw.includes('kg')) {
+        // UPDATED LOGIC: Handle kg, grams, and g units correctly
+        if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
             totalWeightGrams += (weightValue * 1000);
+        } else if (weightRaw.includes('gram') || weightRaw.includes(' g')) {
+            totalWeightGrams += weightValue;
         } else {
+            // Defaulting to grams if no unit is specified to prevent massive weight spikes
             totalWeightGrams += weightValue;
         }
 

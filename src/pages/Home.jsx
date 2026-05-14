@@ -22,7 +22,7 @@ const Home = () => {
   const [outsideCampusData, setOutsideCampusData] = useState([]); // NEW STATE FOR OTHERS
   const [binData, setBinData] = useState([]);
   const [activityData, setActivityData] = useState([]);
-  const [stats, setStats] = useState({ totalItems: 0, totalUsers: 0, totalWeight: 0 });
+  const [stats, setStats] = useState({ totalItems: 0, totalUsers: 0, totalWeight: 0, totalVolume: 0 }); // Added totalVolume
   
   // NEW STATE FOR TIME FILTERING
   const [filterType, setFilterType] = useState('year'); 
@@ -68,6 +68,7 @@ const Home = () => {
       const timelineCounts = {};
       let totalWeightGrams = 0;
       let wasteCount = 0;
+      let overallVolume = 0; // Cumulative volume tracker
 
       // Reset Breakdown (Now tracking weight/volume)
       const breakdown = { organic: 0, paper: 0, plastic: 0, inorganic: 0, toxic: 0 };
@@ -80,13 +81,17 @@ const Home = () => {
         if (createdAt && createdAt >= startDate && createdAt <= endDate) {
           const college = data.location?.detectedCollege || 'Other';
           
-          // --- UPDATED WEIGHT PARSING LOGIC TO HANDLE G AND KG ---
-          const weightRaw = String(data.totalWeight || '0').toLowerCase();
+          // --- UPDATED WEIGHT PARSING LOGIC TO HANDLE G AND KG ACCURATELY ---
+          const weightRaw = String(data.totalWeight || '0').toLowerCase().replace(/,/g, '');
+          // This regex finds the number part correctly even for large values like 123.45
           const weightMatch = weightRaw.match(/(\d+(\.\d+)?)/);
-          let weightInGrams = weightMatch ? parseFloat(weightMatch[0]) : 0;
+          let numericValue = weightMatch ? parseFloat(weightMatch[0]) : 0;
+          let weightInGrams = 0;
 
-          if (weightRaw.includes('kg')) {
-            weightInGrams = weightInGrams * 1000; // Convert KG to G
+          if (weightRaw.includes('kg') || weightRaw.includes('kilogram')) {
+            weightInGrams = numericValue * 1000; // Convert KG to G
+          } else {
+            weightInGrams = numericValue; // Assume grams otherwise
           }
           // -------------------------------------------------------
 
@@ -106,13 +111,29 @@ const Home = () => {
           const bin = data.binData || 'Unsorted';
           binCounts[bin] = (binCounts[bin] || 0) + 1;
 
-          // SPECIFIC TYPE BREAKDOWN LOGIC - UPDATED TO ACCUMULATE VOLUME (WEIGHT)
-          const wasteType = String(data.binData || '').toLowerCase();
-          if (wasteType.includes('organic') || wasteType.includes('biodegradable')) breakdown.organic += weightInGrams;
-          else if (wasteType.includes('paper')) breakdown.paper += weightInGrams;
-          else if (wasteType.includes('plastic')) breakdown.plastic += weightInGrams;
-          else if (wasteType.includes('toxic') || wasteType.includes('hazardous')) breakdown.toxic += weightInGrams;
-          else breakdown.inorganic += weightInGrams;
+          // SPECIFIC TYPE BREAKDOWN LOGIC - UPDATED TO EXTRACT VOLUME FROM directVolume STRING
+          const volStr = data.directVolume || "";
+          // Helper to extract number before "Liters" for each category
+          const getVol = (cat) => {
+            const regex = new RegExp(`${cat}:\\s*(\\d+(\\.\\d+)?)\\s*Liters`, "i");
+            const match = volStr.match(regex);
+            return match ? parseFloat(match[1]) : 0;
+          };
+
+          const orgVol = getVol('Organic');
+          const papVol = getVol('Paper');
+          const plaVol = getVol('Plastic');
+          const inoVol = getVol('Inorganic');
+          const toxVol = getVol('Toxic');
+
+          breakdown.organic += orgVol;
+          breakdown.paper += papVol;
+          breakdown.plastic += plaVol;
+          breakdown.inorganic += inoVol;
+          breakdown.toxic += toxVol;
+
+          // Accumulate the volume for this specific entry to the overall total
+          overallVolume += (orgVol + papVol + plaVol + inoVol + toxVol);
 
           // Timeline Activity
           const date = createdAt.toLocaleDateString() || 'Unknown';
@@ -140,7 +161,7 @@ const Home = () => {
       // Formatting Weight per College (Converting to kg for the chart)
       setCollegeWeightData(Object.keys(collegeWeights).map(name => ({
         name,
-        weight: parseFloat((collegeWeights[name] / 1000).toFixed(2))
+        weight: parseFloat((collegeWeights[name] / 1000).toFixed(3))
       })));
 
       setBinData(Object.keys(binCounts).map(name => ({ 
@@ -153,20 +174,21 @@ const Home = () => {
         scans: timelineCounts[date] 
       })));
       
-      // Convert breakdown grams to KG for the metrics display
-      const breakdownInKg = {
-        organic: (breakdown.organic / 1000).toFixed(2),
-        paper: (breakdown.paper / 1000).toFixed(2),
-        plastic: (breakdown.plastic / 1000).toFixed(2),
-        inorganic: (breakdown.inorganic / 1000).toFixed(2),
-        toxic: (breakdown.toxic / 1000).toFixed(2)
+      // Update the breakdown state (Labels still say kg in UI, but logic now maps to Liters from directVolume)
+      const volumeBreakdown = {
+        organic: breakdown.organic.toFixed(2),
+        paper: breakdown.paper.toFixed(2),
+        plastic: breakdown.plastic.toFixed(2),
+        inorganic: breakdown.inorganic.toFixed(2),
+        toxic: breakdown.toxic.toFixed(2)
       };
 
-      setTypeBreakdown(breakdownInKg);
+      setTypeBreakdown(volumeBreakdown);
       setStats({
         totalItems: wasteCount,
         totalUsers: userSnapshot.size,
-        totalWeight: (totalWeightGrams / 1000).toFixed(2) 
+        totalWeight: (totalWeightGrams / 1000).toFixed(3), // Increased precision to 3 decimals to catch grams better
+        totalVolume: overallVolume.toFixed(2) // Save total volume
       });
     };
 
@@ -227,7 +249,7 @@ const Home = () => {
       {/* --- STAT CARDS --- */}
       <div className="stats-grid" style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', // Updated to 4 columns to fit Volume
         gap: '24px', 
         marginBottom: '32px' 
       }}>
@@ -240,12 +262,16 @@ const Home = () => {
           <p style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 'bold', color: '#111827', margin: '10px 0 0' }}>{stats.totalUsers}</p>
         </div>
         <div style={cardStyle}>
-          <h3 style={{ color: '#6b7280', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overall Waste</h3>
+          <h3 style={{ color: '#6b7280', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Weight</h3>
           <p style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 'bold', color: '#10B981', margin: '10px 0 0' }}>{stats.totalWeight} <span style={{ fontSize: '1rem', color: '#9ca3af' }}>kg</span></p>
+        </div>
+        <div style={cardStyle}>
+          <h3 style={{ color: '#6b7280', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Volume</h3>
+          <p style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 'bold', color: '#3B82F6', margin: '10px 0 0' }}>{stats.totalVolume} <span style={{ fontSize: '1rem', color: '#9ca3af' }}>L</span></p>
         </div>
       </div>
 
-      {/* --- GREEN METRICS TYPE BREAKDOWN --- */}
+      {/* --- GREEN METRICS TYPE BREAKDOWN (Now displaying Volume in Liters) --- */}
       <div className="type-breakdown-grid" style={{ 
         display: 'grid', 
         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', 
@@ -265,9 +291,9 @@ const Home = () => {
             borderTop: `4px solid ${item.color}`,
             gridColumn: (isMobile && idx === 4) ? 'span 2' : 'span 1' 
           }}>
-            <h4 style={{ margin: '0', color: '#6b7280', fontSize: '0.9rem' }}>{item.label}</h4>
+            <h4 style={{ margin: '0', color: '#6b7280', fontSize: '0.9rem' }}>{item.label} Volume</h4>
             <p style={{ fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: '800', color: '#111827', margin: '8px 0 0' }}>
-                {item.val} <span style={{fontSize: '0.8rem', color: '#9ca3af'}}>kg</span>
+                {item.val} <span style={{fontSize: '0.8rem', color: '#9ca3af'}}>L</span>
             </p>
           </div>
         ))}
