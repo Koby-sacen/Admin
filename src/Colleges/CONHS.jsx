@@ -181,7 +181,7 @@ const CONHS = () => {
         </div>
         <div style={{ ...cardStyle, padding: '20px' }}>
           <Users size={24} color="#f59e0b" />
-          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Students</h3>
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Users</h3>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>

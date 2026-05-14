@@ -217,7 +217,7 @@ const GRADUATES = () => {
 
         <div className="stat-card user-card" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div className="card-icon"><Users size={24} color="#eab308" /></div>
-          <h3 style={{ color: '#854d0e', fontSize: '0.85rem', margin: '10px 0' }}>Grad Students</h3>
+          <h3 style={{ color: '#854d0e', fontSize: '0.85rem', margin: '10px 0' }}>Active Users</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>

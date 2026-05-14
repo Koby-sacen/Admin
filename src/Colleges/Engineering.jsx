@@ -184,8 +184,8 @@ const Engineering = () => {
       <div className="header-flex" style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap' }}>
         <HardHat size={isMobile ? 32 : 40} color="#0284c7" /> 
         <div style={{ marginLeft: '15px' }}>
-            <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.8rem', color: '#0c4a6e' }}>Engineering Waste Command</h1>
-            <p style={{ margin: 0, color: '#0369a1', fontSize: isMobile ? '0.8rem' : '1rem' }}>Precision Sustainability Analytics</p>
+            <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.8rem', color: '#0c4a6e' }}>Engineering Waste</h1>
+            <p style={{ margin: 0, color: '#0369a1', fontSize: isMobile ? '0.8rem' : '1rem' }}>Sustainability Analytics</p>
         </div>
       </div>
 
@@ -221,7 +221,7 @@ const Engineering = () => {
 
         <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Users size={24} color="#f59e0b" /></div>
-          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Engineers</h3>
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Users</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>

@@ -201,7 +201,7 @@ const CAS = () => {
         <Palette size={isMobile ? 32 : 40} color="#8b5cf6" /> 
         <div style={{ marginLeft: '15px' }}>
             <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.8rem', color: '#4c1d95' }}>College of Arts and Sciences Dashboard</h1>
-            <p style={{ margin: 0, color: '#7c3aed', fontSize: isMobile ? '0.8rem' : '1rem' }}>Creative Sustainability Analytics</p>
+            <p style={{ margin: 0, color: '#7c3aed', fontSize: isMobile ? '0.8rem' : '1rem' }}>Sustainability Analytics</p>
         </div>
       </div>
 
@@ -239,7 +239,7 @@ const CAS = () => {
 
         <div className="stat-card" style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div className="card-icon"><Users size={24} color="#f59e0b" /></div>
-          <h3 style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px' }}>Contributors</h3>
+          <h3 style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px' }}>Active Users</h3>
           <p className="stat-number" style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>

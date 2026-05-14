@@ -151,7 +151,7 @@ const COED = () => {
         <School size={isMobile ? 32 : 40} color="#06b6d4" />
         <div style={{ marginLeft: '15px' }}>
           <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.8rem', color: '#164e63' }}>College of Education</h1>
-          <p style={{ margin: 0, color: '#0891b2', fontSize: isMobile ? '0.85rem' : '1rem' }}>Sustainability Hub</p>
+          <p style={{ margin: 0, color: '#0891b2', fontSize: isMobile ? '0.85rem' : '1rem' }}>Sustainability Analytics</p>
         </div>
       </div>
 
@@ -184,7 +184,7 @@ const COED = () => {
         </div>
         <div style={{ ...cardStyle, padding: '20px' }}>
           <Users size={24} color="#f59e0b" />
-          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Students</h3>
+          <h3 style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '10px' }}>Active Users</h3>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{stats.uniqueContributors}</p>
         </div>
       </div>
